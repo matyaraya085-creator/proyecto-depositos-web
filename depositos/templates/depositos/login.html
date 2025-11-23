@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Lipigas Ovalle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- VARIABLES --- */
+        :root {
+            --lipi-yellow: #ffcd00;
+            --lipi-yellow-hover: #e6b800;
+            --lipi-blue: #1d1d50; 
+            --text-gray: #666666;
+            --bg-color: #f4f6f9;
+            --input-border: #ced4da;
+            --input-focus: #2e2a78;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column; /* Elementos uno debajo del otro */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--lipi-blue);
+            padding: 20px;
+        }
+
+        /* --- ENCABEZADO (Logo + Título Nuevo) --- */
+        .header-container {
+            text-align: center;
+            margin-bottom: 30px; /* Espacio entre el título y la tarjeta blanca */
+        }
+
+        .logo-img {
+            width: 150px; /* Tamaño del logo */
+            height: auto;
+            display: block;
+            margin: 0 auto 15px auto; /* Centrado y margen abajo */
+        }
+
+        .main-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--lipi-blue);
+            margin: 0;
+        }
+
+        /* --- TARJETA BLANCA --- */
+        .card {
+            background: white;
+            padding: 40px 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1.card-title {
+            color: var(--lipi-blue);
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        p.card-subtitle {
+            color: var(--text-gray);
+            font-size: 0.85rem;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        /* --- FORMULARIO --- */
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--lipi-blue);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1rem;
+            color: #333;
+            background-color: #fff;
+            border: 2px solid var(--input-border);
+            border-radius: 10px;
+            outline: none;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 4px rgba(46, 42, 120, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: #aaa;
+            font-weight: 400;
+        }
+
+        /* --- BOTÓN --- */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.3s;
+            background-color: var(--lipi-yellow);
+            color: #1d1d50;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(255, 205, 0, 0.4);
+        }
+
+        .btn:hover {
+            background-color: var(--lipi-yellow-hover);
+            transform: translateY(-2px);
+        }
+
+        .django-error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            border: 1px solid #ef9a9a;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <img src="{% static 'img/logo-lipigas.svg' %}" alt="Logo Lipigas" class="logo-img">
+        <h1 class="main-title">LIPIGAS OVALLE</h1>
+    </div>
+
+    <div class="card">
+        <header>
+            <h1 class="card-title">Bienvenido al Control de Gestión Administrativo</h1>
+            <p class="card-subtitle">Ingresa con tu nombre de usuario y contraseña</p>
+        </header>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <div class="django-error">
+                    Usuario o contraseña incorrectos.
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label class="input-label">Nombre de usuario</label>
+                <input type="text" name="username" class="form-control" placeholder="Ej: admin" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="input-label">Contraseña</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn">Ingresar</button>
+        </form>
+    </div>
+
+</body>
+</html>

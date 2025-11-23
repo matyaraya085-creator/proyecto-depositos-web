@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Lipigas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+</head>
+<body>
+
+    <div class="top-bar"></div>
+
+    <header class="main-header">
+        <div class="header-left">
+            <div class="brand-wrapper">
+                <a href="{% url 'home' %}" class="brand-logo"> <img src="{% static 'img/logo-lipigas.svg' %}" alt="Lipigas Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Lipigas_logo.svg/2560px-Lipigas_logo.svg.png'">
+                </a>
+                <span class="company-subtext">Servicios Logísticos Celestina Araya SPA</span>
+            </div>
+            
+            <div class="header-divider"></div>
+
+            <div class="welcome-block">
+                <span class="welcome-label">Bienvenido al sistema</span>
+                <span class="welcome-user">
+                    {% if user.is_authenticated %} {{ user.username }} {% else %} admin {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <a href="#" class="btn-workers"><i class="fas fa-users"></i> Gestión Trabajadores</a>
+            
+            <div class="notification-wrapper">
+                <i class="fas fa-bell notification-bell"></i>
+                <div class="notification-badge">3</div>
+            </div>
+
+            <a href="#" class="btn-logout"><i class="fas fa-power-off"></i> Cerrar sesión</a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <div class="bottom-bar">
+        <span>© 2025 Lipigas Ovalle - Sistema Interno</span>
+    </div>
+
+</body>
+</html>

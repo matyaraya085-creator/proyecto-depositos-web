@@ -1,0 +1,61 @@
+{% extends 'depositos/base.html' %}
+
+{% block content %}
+<div style="width: 95%; max-width: 1200px; margin: 0 auto; padding: 40px 0;">
+
+    <!-- Header Simple -->
+    <div style="text-align: center; margin-bottom: 50px;">
+        <h2 class="dashboard-title" style="font-size: 2.2rem;">Gestión de Flujo de Caja</h2>
+        <p style="color: var(--text-gray);">Selecciona una opción para continuar</p>
+    </div>
+
+    <!-- Grid de Menú 2x2 -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+
+        <!-- OPCIÓN 1: BODEGA 1221 -->
+        <a href="{% url 'deposito_bodega' 'Manuel Peñafiel' %}" class="dashboard-card" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; transition: transform 0.2s;">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue); margin-bottom: 20px; width: 80px; height: 80px;">
+                <i class="fas fa-warehouse" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 style="font-size: 1.3rem; margin: 0; font-weight: 700;">Bodega 1221</h3>
+            <p style="margin: 5px 0 0; color: var(--text-gray);">Manuel Peñafiel</p>
+        </a>
+
+        <!-- OPCIÓN 2: BODEGA 1225 -->
+        <a href="{% url 'deposito_bodega' 'David Perry' %}" class="dashboard-card" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; transition: transform 0.2s;">
+            <div class="card-icon-circle" style="background-color: #28a745; margin-bottom: 20px; width: 80px; height: 80px;">
+                <i class="fas fa-warehouse" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 style="font-size: 1.3rem; margin: 0; font-weight: 700;">Bodega 1225</h3>
+            <p style="margin: 5px 0 0; color: var(--text-gray);">David Perry</p>
+        </a>
+
+        <!-- OPCIÓN 3: TOTAL DÍA (Resumen Consolidado) -->
+        <!-- CORRECCIÓN: Apunta a la nueva vista de detalle -->
+        <a href="{% url 'resumen_consolidado' %}" class="dashboard-card" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; transition: transform 0.2s;">
+            <div class="card-icon-circle" style="background-color: #17a2b8; margin-bottom: 20px; width: 80px; height: 80px;">
+                <i class="fas fa-cash-register" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 style="font-size: 1.3rem; margin: 0; font-weight: 700;">Total Día</h3>
+            <p style="margin: 5px 0 0; color: var(--text-gray);">Resumen Consolidado Diario</p>
+        </a>
+
+        <!-- OPCIÓN 4: REPORTES MENSUALES -->
+        <a href="{% url 'reportes_mensuales' %}" class="dashboard-card" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; transition: transform 0.2s;">
+            <div class="card-icon-circle" style="background-color: #6c757d; margin-bottom: 20px; width: 80px; height: 80px;">
+                <i class="fas fa-calendar-alt" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 style="font-size: 1.3rem; margin: 0; font-weight: 700;">Total Mensual</h3>
+            <p style="margin: 5px 0 0; color: var(--text-gray);">Reportes Históricos</p>
+        </a>
+
+    </div>
+</div>
+
+<style>
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+</style>
+{% endblock %}
