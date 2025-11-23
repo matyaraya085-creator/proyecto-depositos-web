@@ -1,0 +1,209 @@
+{% extends 'gestion/base.html' %}
+
+{% block content %}
+<div style="width: 95%; max-width: 1500px; margin: 0 auto; padding-bottom: 50px;">
+
+    <!-- HEADER: Título y Fecha -->
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #ddd; padding-bottom: 15px;">
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <!-- CAMBIO: Botón Volver apunta al Menú -->
+            <a href="{% url 'total_dia' %}" class="btn-workers" style="background-color: var(--lipi-blue); color: white; padding: 8px 15px; text-decoration: none; border-radius: 6px;">
+                <i class="fas fa-arrow-left"></i> Volver al Menú
+            </a>
+            <h2 class="dashboard-title" style="margin: 0; font-size: 1.6rem;">Resumen Consolidado del Día</h2>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <form method="GET" style="display: flex; align-items: center; gap: 10px;">
+                <label for="fecha" style="font-weight: 600; color: #555;">Seleccionar Fecha:</label>
+                <input type="date" id="fecha" name="fecha_seleccionada" value="{{ fecha_seleccionada_str }}" 
+                       onchange="this.form.submit()" 
+                       style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Poppins';">
+            </form>
+            <span style="font-weight: 700; font-size: 1.1rem; color: #333; text-transform: capitalize;">{{ fecha_bonita }}</span>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL: 2 Columnas -->
+    <div style="display: grid; grid-template-columns: 40% 58%; gap: 2%;">
+        
+        <!-- === COLUMNA IZQUIERDA: RESÚMENES POR BODEGA === -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- TARJETA MANUEL PEÑAFIEL -->
+            <div style="background-color: #e9ecef; border-radius: 8px; padding: 15px; border-left: 6px solid var(--lipi-blue);">
+                <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #333;">Bodega: <strong>Manuel Peñafiel</strong></h3>
+                
+                <div style="margin-bottom: 10px; font-size: 0.95rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Aportes:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ mp.aportes }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Desglose:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ mp.desglose_total }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Diferencia:</span>
+                        <span class="monto-fmt {% if mp.diferencia == 0 %}text-success{% elif mp.diferencia > 0 %}text-danger{% else %}text-warning{% endif %}" style="font-weight: 700;">
+                            {{ mp.diferencia }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Detalle Trabajadores MP -->
+                <div style="margin-top: 15px; border-top: 1px solid #dcdcdc; padding-top: 10px;">
+                    <p style="font-style: italic; font-weight: 700; font-size: 0.9rem; margin-bottom: 8px;">Aportes de:</p>
+                    <table style="width: 100%; font-size: 0.9rem;">
+                        <tr style="color: #666; border-bottom: 1px solid #ddd;">
+                            <th style="text-align: left; padding-bottom: 4px;">Trabajador</th>
+                            <th style="text-align: right; padding-bottom: 4px;">Monto</th>
+                        </tr>
+                        {% for item in aportes_mp_list %}
+                        <tr>
+                            <td style="padding: 4px 0;">{{ item.trabajador__nombre }}</td>
+                            <td style="padding: 4px 0; text-align: right;" class="monto-fmt">{{ item.total }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" style="padding: 10px 0; font-style: italic; color: #888;">- Sin aportes -</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- TARJETA DAVID PERRY -->
+            <div style="background-color: #e9ecef; border-radius: 8px; padding: 15px; border-left: 6px solid #28a745;">
+                <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #333;">Bodega: <strong>David Perry</strong></h3>
+                
+                <div style="margin-bottom: 10px; font-size: 0.95rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Aportes:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ dp.aportes }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Desglose:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ dp.desglose_total }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Diferencia:</span>
+                        <span class="monto-fmt {% if dp.diferencia == 0 %}text-success{% elif dp.diferencia > 0 %}text-danger{% else %}text-warning{% endif %}" style="font-weight: 700;">
+                            {{ dp.diferencia }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Detalle Trabajadores DP -->
+                <div style="margin-top: 15px; border-top: 1px solid #dcdcdc; padding-top: 10px;">
+                    <p style="font-style: italic; font-weight: 700; font-size: 0.9rem; margin-bottom: 8px;">Aportes de:</p>
+                    <table style="width: 100%; font-size: 0.9rem;">
+                        <tr style="color: #666; border-bottom: 1px solid #ddd;">
+                            <th style="text-align: left; padding-bottom: 4px;">Trabajador</th>
+                            <th style="text-align: right; padding-bottom: 4px;">Monto</th>
+                        </tr>
+                        {% for item in aportes_dp_list %}
+                        <tr>
+                            <td style="padding: 4px 0;">{{ item.trabajador__nombre }}</td>
+                            <td style="padding: 4px 0; text-align: right;" class="monto-fmt">{{ item.total }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" style="padding: 10px 0; font-style: italic; color: #888;">- Sin aportes -</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- TARJETA TOTAL CONSOLIDADO -->
+            <div style="background-color: #d1ecf1; border-radius: 8px; padding: 15px; border-left: 6px solid #17a2b8;">
+                <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #0c5460;">Total Consolidado</h3>
+                
+                <div style="font-size: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Aportes:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ total.aportes }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Desglose:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ total.desglose_total }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Diferencia:</span>
+                        <span class="monto-fmt {% if total.diferencia == 0 %}text-success{% elif total.diferencia > 0 %}text-danger{% else %}text-warning{% endif %}" style="font-weight: 700;">
+                            {{ total.diferencia }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- === COLUMNA DERECHA: DESGLOSE BILLETES === -->
+        <div style="background-color: #e2e2e2; border-radius: 8px; padding: 20px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.1rem; color: #333;">Desglose Consolidado (Efectivo y Cheques)</h3>
+            
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="border-bottom: 2px solid #ccc;">
+                    <tr>
+                        <th style="text-align: left; padding: 10px; color: #555;">Denominación</th>
+                        <th style="text-align: center; padding: 10px; color: #555;">Cantidad Total</th>
+                        <th style="text-align: right; padding: 10px; color: #555;">Total ($)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in desglose_final %}
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #444;">{{ d.texto }}</td>
+                        <td style="padding: 12px 10px; text-align: center; color: #666;">{{ d.cantidad }}</td>
+                        <td style="padding: 12px 10px; text-align: right; font-weight: 700;" class="monto-fmt">{{ d.total }}</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    <!-- Fila Cheques -->
+                    <tr style="border-top: 2px solid #999; background-color: rgba(0,0,0,0.03);">
+                        <td style="padding: 15px 10px; font-weight: 700;">Cheque</td>
+                        <td style="padding: 15px 10px; text-align: center; font-style: italic;">N/A</td>
+                        <td style="padding: 15px 10px; text-align: right; font-weight: 700;" class="monto-fmt">{{ total_cheques_dia }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const montos = document.querySelectorAll(".monto-fmt");
+        
+        montos.forEach(function(el) {
+            let valorOriginal = parseInt(el.textContent) || 0;
+            let esNegativo = valorOriginal < 0;
+            let valorAbsoluto = Math.abs(valorOriginal);
+            
+            // Formatear miles
+            let textoFormateado = "$" + valorAbsoluto.toLocaleString("es-CL");
+            
+            if (esNegativo) {
+                textoFormateado = "-" + textoFormateado;
+                el.style.color = "#dc3545";
+            } else if (el.classList.contains('text-success')) {
+                el.style.color = "#28a745";
+            }
+            
+            el.textContent = textoFormateado;
+        });
+    });
+</script>
+
+<style>
+    .text-success { color: #28a745; }
+    .text-danger { color: #dc3545; }
+    .text-warning { color: #ffc107; text-shadow: 0px 0px 1px #997404; }
+</style>
+
+{% endblock %}

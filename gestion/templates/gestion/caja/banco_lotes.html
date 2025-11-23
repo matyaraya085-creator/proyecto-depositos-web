@@ -1,0 +1,156 @@
+{% extends 'gestion/core/base.html' %}
+
+{% block content %}
+<div style="width: 95%; max-width: 1400px; margin: 0 auto;">
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 20px;">
+        <div>
+            <h2 class="dashboard-title" style="margin: 0;">
+                {% if "Manuel" in bodega_nombre %}
+                    Bodega 1221: Manuel Peñafiel
+                {% elif "David" in bodega_nombre %}
+                    Bodega 1225: David Perry
+                {% else %}
+                    Bodega: {{ bodega_nombre }}
+                {% endif %}
+            </h2>
+            <p class="dashboard-subtitle" style="margin-top: 5px;">Gestión de lotes y depósitos diarios</p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <form method="GET" style="background: white; padding: 8px 20px; border-radius: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 10px;">
+                <label for="fecha" style="font-weight: 600; color: var(--text-gray);"><i class="far fa-calendar-alt"></i> Fecha:</label>
+                <input type="date" id="fecha" name="fecha_seleccionada" value="{{ fecha_seleccionada_str }}" 
+                       onchange="this.form.submit()" 
+                       style="border: none; outline: none; font-family: 'Poppins'; font-size: 1rem; color: var(--lipi-blue); font-weight: 700; background: transparent;">
+            </form>
+
+            <a href="{% url 'total_dia' %}" style="text-decoration: none; color: var(--text-gray); font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-arrow-left"></i> Volver atrás
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px;">
+
+        <div class="dashboard-card" 
+             onclick="document.getElementById('form-crear-lote').submit();"
+             style="border: 2px dashed var(--lipi-blue); background-color: rgba(29, 29, 80, 0.02); cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 280px; transition: all 0.3s; max-width: 400px; width: 100%;">
+            
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue); margin-bottom: 20px; width: 70px; height: 70px; display: flex; justify-content: center; align-items: center;">
+                <i class="fas fa-plus card-icon" style="color: white; font-size: 1.8rem;"></i>
+            </div>
+            
+            <span class="card-title" style="font-size: 1.4rem; margin-bottom: 5px; color: var(--lipi-blue);">Nuevo Lote</span>
+            <span class="card-desc" style="font-size: 0.9rem; color: #888;">Abrir una nueva bolsa</span>
+
+            <form id="form-crear-lote" action="{% url 'crear_nuevo_lote' %}" method="POST" style="display: none;">
+                {% csrf_token %}
+                <input type="hidden" name="bodega_nombre" value="{{ bodega_nombre }}">
+                <input type="hidden" name="fecha_seleccionada" value="{{ fecha_seleccionada_str }}">
+            </form>
+        </div>
+
+        {% for lote in lotes_del_dia %}
+            <div class="dashboard-card" style="position: relative; padding: 30px 25px; {% if lote.cerrado %} border-top: 6px solid #28a745; {% else %} border-top: 6px solid #ffc107; {% endif %} min-height: 280px; display: flex; flex-direction: column; justify-content: space-between; max-width: 400px; width: 100%;">
+                
+                <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10;">
+                    {% if not lote.cerrado or user.is_superuser %}
+                        <button onclick="renombrarLote('{{ lote.id }}', '{{ lote.nombre_lote|default:'' }}'); event.stopPropagation();" 
+                                title="Cambiar nombre"
+                                style="background: none; border: none; color: #bbb; cursor: pointer; font-size: 1rem;">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    {% endif %}
+                    {% if user.is_superuser %}
+                        <form action="{% url 'eliminar_lote' lote.id %}" method="POST" style="margin: 0;" onsubmit="return confirm('¿ADMIN: Eliminar este lote?');">
+                            {% csrf_token %}
+                            <button type="submit" title="Eliminar" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+
+                <a href="{% url 'editar_lote' lote.id %}" 
+                   style="text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; width: 100%; flex: 1;">
+                    
+                    <div class="card-icon-circle" style="{% if lote.cerrado %} background-color: #d4edda; {% else %} background-color: #fff3cd; {% endif %} margin-bottom: 15px; width: 60px; height: 60px;">
+                        {% if lote.cerrado %}
+                            <i class="fas fa-lock card-icon" style="color: #155724; font-size: 1.5rem;"></i>
+                        {% else %}
+                            <i class="fas fa-lock-open card-icon" style="color: #856404; font-size: 1.5rem;"></i>
+                        {% endif %}
+                    </div>
+
+                    <span class="card-title" style="font-size: 1.4rem; margin-bottom: 5px;">Lote N° {{ lote.numero_lote }}</span>
+                    
+                    {% if lote.cerrado %}
+                        <span style="font-weight: 700; color: #28a745; font-size: 1rem; margin-bottom: 5px;">CERRADO</span>
+                    {% endif %}
+
+                    {% if lote.nombre_lote %}
+                        <span style="color: var(--text-gray); font-size: 0.9rem; margin-top: 2px;">
+                            {{ lote.nombre_lote }}
+                        </span>
+                    {% endif %}
+
+                    <div style="margin-top: auto; text-align: center; padding-top: 20px;">
+                        <p style="font-size: 0.9rem; color: var(--text-gray); margin-bottom: 5px;">Total Aportes:</p>
+                        <p style="font-weight: 800; font-size: 1.6rem; color: var(--lipi-blue);" class="monto-formatear">
+                            {{ lote.total_aportes|default:"0" }}
+                        </p>
+                    </div>
+
+                    {% if lote.diferencia != 0 and lote.cerrado %}
+                        <div class="alert-pill status-danger" style="margin-top: 15px;">
+                            <i class="fas fa-exclamation-triangle"></i> Dif: ${{ lote.diferencia }}
+                        </div>
+                    {% elif lote.cerrado %}
+                        <div class="alert-pill status-success" style="margin-top: 15px; padding: 5px 15px;">
+                            <i class="fas fa-check"></i> Cuadrado
+                        </div>
+                    {% else %}
+                        <div class="alert-pill status-warning" style="margin-top: 15px; padding: 5px 15px;">
+                            <i class="fas fa-clock"></i> Abierto
+                        </div>
+                    {% endif %}
+                </a>
+            </div>
+        {% empty %}
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: var(--text-gray); padding: 30px; min-height: 280px; opacity: 0.6; border: 2px dashed #eee; border-radius: 12px;">
+                <i class="far fa-folder-open" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                <p style="font-size: 1.1rem; margin: 0;">No hay lotes creados</p>
+                <p style="font-size: 0.9rem; margin-top: 5px;">para el día {{ fecha_seleccionada_str }}</p>
+            </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<form id="form-renombrar" method="POST" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="nuevo_nombre" id="input-nuevo-nombre">
+</form>
+
+<script>
+    function renombrarLote(idLote, nombreActual) {
+        let nuevoNombre = prompt("Ingresa un nombre o turno para identificar este lote:", nombreActual);
+        if (nuevoNombre !== null) {
+            let form = document.getElementById('form-renombrar');
+            form.action = "/lote/" + idLote + "/renombrar/";
+            document.getElementById('input-nuevo-nombre').value = nuevoNombre;
+            form.submit();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        let montos = document.querySelectorAll(".monto-formatear");
+        montos.forEach(function(elemento) {
+            let valor = parseInt(elemento.innerText) || 0;
+            elemento.innerText = "$" + valor.toLocaleString("es-CL");
+        });
+    });
+</script>
+
+{% endblock %}
