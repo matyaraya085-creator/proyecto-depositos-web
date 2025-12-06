@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import date, timedelta
 
 # Opciones para los campos de "bodega"
 # Así nos aseguramos de que los datos sean consistentes
@@ -79,3 +80,44 @@ class DepositoDesglose(models.Model):
 
     def __str__(self):
         return f"{self.cantidad} x {self.denominacion}"
+    
+class Vehiculo(models.Model):
+    patente = models.CharField(max_length=10, unique=True, verbose_name="Patente")
+    fecha_mantencion = models.DateField(null=True, blank=True, verbose_name="Venc. Mantención")
+    fecha_permiso = models.DateField(null=True, blank=True, verbose_name="Venc. Permiso Circulación")
+    
+    kilometraje_actual = models.IntegerField(default=0, verbose_name="KM Actual")
+    kilometraje_maximo = models.IntegerField(default=0, verbose_name="KM Máximo (Mantención)")
+    
+    km_diarios = models.FloatField(default=0.0, verbose_name="Promedio KM Diarios")
+    dias_uso_semanal = models.IntegerField(default=5, verbose_name="Días uso semana")
+
+    def __str__(self):
+        return f"{self.patente}"
+
+    # --- LÓGICA DE NOTIFICACIONES (Adaptada de tu Python) ---
+    def get_alertas(self):
+        alertas = []
+        hoy = date.today()
+
+        # 1. Chequeo de Fechas (Vencidos)
+        if self.fecha_mantencion and self.fecha_mantencion <= hoy:
+            alertas.append("🔴 MANTENCIÓN VENCIDA")
+        elif self.fecha_mantencion and (self.fecha_mantencion - hoy).days <= 30:
+            dias = (self.fecha_mantencion - hoy).days
+            alertas.append(f"🟡 Mantención vence en {dias} días")
+
+        if self.fecha_permiso and self.fecha_permiso <= hoy:
+            alertas.append("🔴 PERMISO VENCIDO")
+        elif self.fecha_permiso and (self.fecha_permiso - hoy).days <= 30:
+            dias = (self.fecha_permiso - hoy).days
+            alertas.append(f"🟡 Permiso vence en {dias} días")
+
+        # 2. Chequeo de Kilometraje
+        km_restante = self.kilometraje_maximo - self.kilometraje_actual
+        if km_restante <= 0:
+            alertas.append(f"🔴 KILOMETRAJE EXCEDIDO ({km_restante} km)")
+        elif km_restante <= 1000: # Alerta si faltan menos de 1000 km
+            alertas.append(f"🟡 Kilometraje al límite (quedan {km_restante} km)")
+            
+        return alertas

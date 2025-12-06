@@ -41,7 +41,9 @@
             
             <div class="notification-wrapper">
                 <i class="fas fa-bell notification-bell"></i>
-                <div class="notification-badge">3</div>
+                {% if cantidad_alertas and cantidad_alertas > 0 %}
+                    <div class="notification-badge">{{ cantidad_alertas }}</div>
+                {% endif %}
             </div>
 
             <a href="{% url 'logout' %}" class="btn-logout"><i class="fas fa-power-off"></i> Cerrar sesión</a>
