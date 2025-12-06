@@ -54,4 +54,5 @@ urlpatterns = [
     # ==========================================
     path('remuneraciones/menu/', remuneraciones.menu_remuneraciones, name='menu_remuneraciones'),
     path('remuneraciones/nomina/', remuneraciones.nomina_mensual, name='nomina_mensual'),
+    path('remuneraciones/calcular/', remuneraciones.calcular_sueldo, name='calcular_sueldo'),
 ]

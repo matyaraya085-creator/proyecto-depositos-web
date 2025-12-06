@@ -15,5 +15,5 @@ def nomina_mensual(request):
     """
     Tabla principal donde se listan los trabajadores para el cálculo del mes.
     """
-    # En el futuro aquí cargaremos: trabajadores = Trabajador.objects.all()
+    # Aquí cargaremos a futuro los trabajadores de la BD
     return render(request, 'gestion/remuneraciones/nomina_mensual.html')
