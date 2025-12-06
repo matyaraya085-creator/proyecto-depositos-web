@@ -1,7 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-# IMPORTANTE: Importamos los 3 módulos nuevos desde la carpeta views
-from gestion.views import core, banco, trabajadores 
+# IMPORTANTE: Agregamos caja_trabajador a los imports
+from gestion.views import core, banco, trabajadores, caja_trabajador 
 
 urlpatterns = [
     # ==========================================
@@ -10,7 +10,7 @@ urlpatterns = [
     path('', core.home, name='index'),
     path('home/', core.home, name='home'),
     
-    # Rutas de autenticación (Login nativo de Django)
+    # Rutas de autenticación
     path('accounts/login/', auth_views.LoginView.as_view(template_name='gestion/core/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 
@@ -37,6 +37,10 @@ urlpatterns = [
     # ==========================================
     # 3. GESTIÓN DE TRABAJADORES
     # ==========================================
+    # --- NUEVA RUTA DEL MENÚ ---
+    path('trabajadores/menu/', caja_trabajador.menu_trabajadores, name='menu_trabajadores'),
+    
+    # Rutas CRUD existentes
     path('trabajadores/', trabajadores.gestion_trabajadores, name='gestion_trabajadores'),
     path('trabajadores/agregar/', trabajadores.agregar_trabajador, name='agregar_trabajador'),
     path('trabajadores/<int:trabajador_id>/editar/', trabajadores.editar_trabajador, name='editar_trabajador'),
