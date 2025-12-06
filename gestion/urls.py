@@ -40,6 +40,7 @@ urlpatterns = [
     # --- NUEVA RUTA DEL MENÚ ---
     path('trabajadores/menu/', caja_trabajador.menu_trabajadores, name='menu_trabajadores'),
     path('trabajadores/rendicion-ejemplo/', caja_trabajador.form_rendicion, name='form_rendicion_ejemplo'),
+    path('trabajadores/reporte-mensual/', caja_trabajador.reporte_mensual, name='reporte_mensual_trabajador'),
     
     # Rutas CRUD existentes
     path('trabajadores/', trabajadores.gestion_trabajadores, name='gestion_trabajadores'),

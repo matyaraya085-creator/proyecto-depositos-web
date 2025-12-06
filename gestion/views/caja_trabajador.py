@@ -5,14 +5,15 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def menu_trabajadores(request):
-    """
-    Vista principal del menú.
-    """
     return render(request, 'gestion/caja_trabajador/menu_trabajador.html')
 
 @login_required
 def form_rendicion(request):
-    """
-    Vista para el formulario de rendición (Diseño visual).
-    """
     return render(request, 'gestion/caja_trabajador/form_rendicion.html')
+
+@login_required
+def reporte_mensual(request):
+    """
+    Vista para el reporte mensual acumulado.
+    """
+    return render(request, 'gestion/caja_trabajador/reporte_mensual.html')
