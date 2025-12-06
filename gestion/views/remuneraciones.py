@@ -6,7 +6,14 @@ from django.contrib.auth.decorators import login_required
 @login_required
 def menu_remuneraciones(request):
     """
-    Vista principal del menú de remuneraciones.
+    Menú principal.
     """
-    # Asegúrate de crear la carpeta 'remuneraciones' dentro de templates/gestion/
     return render(request, 'gestion/remuneraciones/menu_remuneraciones.html')
+
+@login_required
+def nomina_mensual(request):
+    """
+    Tabla principal donde se listan los trabajadores para el cálculo del mes.
+    """
+    # En el futuro aquí cargaremos: trabajadores = Trabajador.objects.all()
+    return render(request, 'gestion/remuneraciones/nomina_mensual.html')

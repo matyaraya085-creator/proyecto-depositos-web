@@ -48,8 +48,10 @@ urlpatterns = [
     path('trabajadores/<int:trabajador_id>/editar/', trabajadores.editar_trabajador, name='editar_trabajador'),
     path('trabajadores/<int:trabajador_id>/eliminar/', trabajadores.eliminar_trabajador, name='eliminar_trabajador'),
 
+    # ...
     # ==========================================
-    # 4. MÓDULO REMUNERACIONES (NUEVO)
+    # 4. MÓDULO REMUNERACIONES
     # ==========================================
     path('remuneraciones/menu/', remuneraciones.menu_remuneraciones, name='menu_remuneraciones'),
+    path('remuneraciones/nomina/', remuneraciones.nomina_mensual, name='nomina_mensual'),
 ]
