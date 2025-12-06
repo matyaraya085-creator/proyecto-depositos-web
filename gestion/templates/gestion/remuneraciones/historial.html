@@ -1,0 +1,110 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 1200px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+        <div>
+            <h2 class="fw-bold mb-0">🗂️ Historial de Liquidaciones</h2>
+            <p class="text-muted">Consulta y descarga de documentos anteriores</p>
+        </div>
+        <a href="{% url 'menu_remuneraciones' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body py-3">
+            <form class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <label class="fw-bold small text-muted mb-1">Trabajador:</label>
+                    <input type="text" class="form-control border-primary shadow-sm" placeholder="Buscar por nombre...">
+                </div>
+                <div class="col-md-3">
+                    <label class="fw-bold small text-muted mb-1">Año:</label>
+                    <select class="form-select border-primary shadow-sm">
+                        <option selected>2023</option>
+                        <option>2022</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="fw-bold small text-muted mb-1">Mes:</label>
+                    <select class="form-select border-primary shadow-sm">
+                        <option selected>Todos</option>
+                        <option>Octubre</option>
+                        <option>Septiembre</option>
+                        <option>Agosto</option>
+                    </select>
+                </div>
+                <div class="col-md-2 align-self-end">
+                    <button class="btn btn-primary w-100 rounded-pill"><i class="fas fa-search"></i> Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Periodo</th>
+                        <th>Trabajador</th>
+                        <th>Sueldo Líquido</th>
+                        <th class="text-center">Fecha Pago</th>
+                        <th class="text-end pe-4">Documento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ps-4 fw-bold text-secondary">Septiembre 2023</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-dark fw-bold me-2" style="width: 35px; height: 35px; font-size: 0.8rem;">JP</div>
+                                <span>Juan Pérez</span>
+                            </div>
+                        </td>
+                        <td class="fw-bold text-dark">$530.500</td>
+                        <td class="text-center text-muted small">30/09/2023</td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'ver_liquidacion' %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </a>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="ps-4 fw-bold text-secondary">Agosto 2023</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-dark fw-bold me-2" style="width: 35px; height: 35px; font-size: 0.8rem;">JP</div>
+                                <span>Juan Pérez</span>
+                            </div>
+                        </td>
+                        <td class="fw-bold text-dark">$525.000</td>
+                        <td class="text-center text-muted small">31/08/2023</td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'ver_liquidacion' %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white py-3">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item disabled"><a class="page-link" href="#">Anterior</a></li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">Siguiente</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

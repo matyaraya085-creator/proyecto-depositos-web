@@ -43,3 +43,10 @@ def parametros(request):
     Vista de configuración de valores (UF, UTM, AFP, etc).
     """
     return render(request, 'gestion/remuneraciones/parametros.html')
+
+@login_required
+def historial(request):
+    """
+    Lista de liquidaciones históricas pagadas.
+    """
+    return render(request, 'gestion/remuneraciones/historial.html')

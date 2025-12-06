@@ -59,4 +59,5 @@ urlpatterns = [
     path('remuneraciones/liquidacion/', remuneraciones.ver_liquidacion, name='ver_liquidacion'),
     # NUEVA RUTA:
     path('remuneraciones/parametros/', remuneraciones.parametros, name='parametros_remuneraciones'),
+    path('remuneraciones/historial/', remuneraciones.historial, name='historial_remuneraciones'),
 ]
