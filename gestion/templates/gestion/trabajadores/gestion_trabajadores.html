@@ -153,10 +153,9 @@
             inputNombre.value = nombre;
             inputBodega.value = bodega;
 
-            // Actualizar la URL del action del formulario dinámicamente
-            // NOTA PARA TU AMIGO: Esto asume una URL tipo /trabajadores/editar/ID/
-            // Si la URL es distinta, él deberá ajustar esto.
-            form.action = "/trabajadores/editar/" + id + "/"; 
+            // ACTUALIZACIÓN IMPORTANTE: 
+            // La URL ahora coincide con urls.py: /trabajadores/ID/editar/
+            form.action = "/trabajadores/" + id + "/editar/"; 
         });
     });
 </script>
