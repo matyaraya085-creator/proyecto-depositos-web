@@ -1,0 +1,76 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+    <div class="row align-items-center mb-5 mt-4">
+        <div class="col-md-8">
+            <h2 class="dashboard-title" style="margin: 0;">Gestión de Remuneraciones</h2>
+            <p style="color: var(--text-gray); margin: 5px 0 0;">Cálculo de sueldos, imposiciones y liquidaciones</p>
+        </div>
+
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{% url 'home' %}" class="btn-workers" style="
+                background-color: var(--lipi-blue, #0d6efd); 
+                color: white; 
+                padding: 10px 24px; 
+                text-decoration: none; 
+                border-radius: 50px; 
+                display: inline-flex; 
+                align-items: center; 
+                gap: 10px; 
+                white-space: nowrap; 
+                transition: transform 0.2s;
+                font-weight: 500;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-grid" style="justify-content: center;">
+
+        <a href="#" class="dashboard-card"> <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
+                <i class="fas fa-file-invoice-dollar card-icon"></i>
+            </div>
+            <span class="card-title">Procesar Sueldos</span>
+            <span class="card-desc">Nómina del mes actual</span>
+        </a>
+
+        <a href="#" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #6c757d;">
+                <i class="fas fa-history card-icon"></i>
+            </div>
+            <span class="card-title">Historial</span>
+            <span class="card-desc">Liquidaciones anteriores</span>
+        </a>
+
+        <a href="#" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #fd7e14;"> <i class="fas fa-cogs card-icon"></i>
+            </div>
+            <span class="card-title">Parámetros</span>
+            <span class="card-desc">AFP, Salud y Tramos</span>
+        </a>
+
+        <a href="{% url 'gestion_trabajadores' %}" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #20c997;">
+                <i class="fas fa-user-edit card-icon"></i>
+            </div>
+            <span class="card-title">Editar Fichas</span>
+            <span class="card-desc">Datos base trabajadores</span>
+        </a>
+
+    </div>
+
+<style>
+    .btn-workers:hover {
+        transform: scale(1.05);
+        opacity: 0.95;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+</style>
+
+{% endblock %}

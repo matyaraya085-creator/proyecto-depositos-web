@@ -1,7 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-# IMPORTANTE: Agregamos caja_trabajador a los imports
-from gestion.views import core, banco, trabajadores, caja_trabajador 
+# IMPORTANTE: Agregamos 'remuneraciones' a los imports
+from gestion.views import core, banco, trabajadores, caja_trabajador, remuneraciones
 
 urlpatterns = [
     # ==========================================
@@ -47,4 +47,9 @@ urlpatterns = [
     path('trabajadores/agregar/', trabajadores.agregar_trabajador, name='agregar_trabajador'),
     path('trabajadores/<int:trabajador_id>/editar/', trabajadores.editar_trabajador, name='editar_trabajador'),
     path('trabajadores/<int:trabajador_id>/eliminar/', trabajadores.eliminar_trabajador, name='eliminar_trabajador'),
+
+    # ==========================================
+    # 4. MÓDULO REMUNERACIONES (NUEVO)
+    # ==========================================
+    path('remuneraciones/menu/', remuneraciones.menu_remuneraciones, name='menu_remuneraciones'),
 ]
