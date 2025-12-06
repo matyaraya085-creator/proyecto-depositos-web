@@ -36,4 +36,5 @@ def home(request):
         'notificaciones': lista_notificaciones,
         'cantidad_alertas': cantidad_alertas
     }
-    return render(request, 'home.html', context)
+    # Fíjate que agregamos la ruta completa dentro de templates
+    return render(request, 'gestion/core/home.html', context)
