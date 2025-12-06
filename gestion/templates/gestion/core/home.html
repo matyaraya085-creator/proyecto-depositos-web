@@ -4,34 +4,6 @@
     <h2 class="dashboard-title">Gestión Administrativa</h2>
     <p class="dashboard-subtitle">Selecciona un módulo para comenzar a trabajar</p>
 
-    {% if notificaciones %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-bottom-0 pt-3">
-            <h5 class="mb-0 fw-bold text-secondary">
-                <i class="fas fa-bell text-warning me-2"></i>Centro de Notificaciones
-            </h5>
-        </div>
-        <div class="card-body pt-0">
-            <div class="list-group list-group-flush">
-                {% for notif in notificaciones %}
-                <div class="list-group-item px-0 py-2 d-flex align-items-center">
-                    {% if notif.tipo == 'danger' %}
-                        <i class="fas fa-exclamation-circle text-danger me-3 fs-5"></i>
-                    {% else %}
-                        <i class="fas fa-exclamation-triangle text-warning me-3 fs-5"></i>
-                    {% endif %}
-                    
-                    <div>
-                        <span class="fw-bold text-dark">{{ notif.patente }}</span>: 
-                        <span class="text-{{ notif.tipo }} fw-bold">{{ notif.mensaje }}</span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     <div class="dashboard-grid">
         
         <a href="{% url 'total_dia' %}" class="dashboard-card">
@@ -52,18 +24,5 @@
             <span class="card-desc">Gestión de pagos y liquidaciones</span>
         </a>
 
-        <a href="{% url 'menu_camionetas' %}" class="dashboard-card {% if cantidad_alertas > 0 %}status-danger{% else %}status-success{% endif %}">
-            <div class="card-icon-circle"><i class="fas fa-truck-pickup card-icon"></i></div>
-            <span class="card-title">Flota de Camionetas</span>
-            <span class="card-desc">Mantenciones y documentación</span>
-            
-            <div class="alert-pill">
-                {% if cantidad_alertas > 0 %}
-                    <i class="fas fa-exclamation-circle"></i> {{ cantidad_alertas }} Alertas
-                {% else %}
-                    <i class="fas fa-check-circle"></i> Todo al día
-                {% endif %}
-            </div>
-        </a>
-    </div>
+        </div>
 {% endblock %}
