@@ -28,3 +28,11 @@ def calcular_sueldo(request):
         return redirect('nomina_mensual')
         
     return render(request, 'gestion/remuneraciones/formulario_calculo.html')
+
+@login_required
+def ver_liquidacion(request):
+    """
+    Muestra el detalle final de la liquidación (formato imprimible).
+    """
+    # CORRECCIÓN: Apuntamos a 'liquidacion_detalle.html'
+    return render(request, 'gestion/remuneraciones/liquidacion_detalle.html')

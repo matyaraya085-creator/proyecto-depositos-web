@@ -1,0 +1,185 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 1000px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-4 d-print-none">
+        <div>
+            <h2 class="fw-bold mb-0">📄 Detalle de Liquidación</h2>
+            <p class="text-muted">Vista previa antes de firmar</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="fas fa-print me-2"></i> Imprimir / PDF
+            </button>
+            <a href="{% url 'nomina_mensual' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-lg border-0 mb-5">
+        <div class="card-body p-5">
+            
+            <div class="row border-bottom pb-4 mb-4">
+                <div class="col-8">
+                    <h4 class="fw-bold text-uppercase">Liquidación de Sueldo</h4>
+                    <p class="mb-0 small text-muted">Servicios Logísticos Celestina Araya SPA</p>
+                    <p class="mb-0 small text-muted">RUT: 76.XXX.XXX-X</p>
+                    <p class="mb-0 small text-muted">Ovalle, Coquimbo</p>
+                </div>
+                <div class="col-4 text-end">
+                    <div class="bg-light p-3 rounded border">
+                        <span class="d-block text-secondary small fw-bold text-uppercase">Periodo</span>
+                        <span class="d-block fs-5 fw-bold text-dark">OCTUBRE 2023</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <table class="table table-sm table-borderless small mb-0">
+                        <tr>
+                            <td class="text-secondary fw-bold" width="120">Trabajador:</td>
+                            <td class="fw-bold text-dark fs-6">PEDRO GONZÁLEZ</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold">RUT:</td>
+                            <td class="text-dark">9.876.543-2</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold">Cargo:</td>
+                            <td class="text-dark">Peoneta</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-sm table-borderless small mb-0">
+                        <tr>
+                            <td class="text-secondary fw-bold" width="140">Días Trabajados:</td>
+                            <td class="text-dark">30</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold">Fecha Ingreso:</td>
+                            <td class="text-dark">01-03-2022</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary fw-bold">Centro Costo:</td>
+                            <td class="text-dark">Bodega 1225</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle">
+                    <thead class="bg-light text-center small text-uppercase">
+                        <tr>
+                            <th style="width: 50%;">Detalle (Haberes y Descuentos)</th>
+                            <th style="width: 25%;">Haberes ($)</th>
+                            <th style="width: 25%;">Descuentos ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Sueldo Base</td>
+                            <td class="text-end">450.000</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                        <tr>
+                            <td>Gratificación Legal (25%)</td>
+                            <td class="text-end">152.000</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                        <tr>
+                            <td>Horas Extras (5 hrs)</td>
+                            <td class="text-end">25.000</td>
+                            <td class="bg-light"></td>
+                        </tr>
+
+                        <tr>
+                            <td>Movilización y Colación</td>
+                            <td class="text-end">50.000</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                        <tr>
+                            <td>Asignación Familiar (2 cargas)</td>
+                            <td class="text-end">15.000</td>
+                            <td class="bg-light"></td>
+                        </tr>
+
+                        <tr>
+                            <td>Cotización AFP (Modelo 10.58%)</td>
+                            <td class="bg-light"></td>
+                            <td class="text-end text-danger">65.000</td>
+                        </tr>
+                        <tr>
+                            <td>Cotización Salud (Fonasa 7%)</td>
+                            <td class="bg-light"></td>
+                            <td class="text-end text-danger">43.000</td>
+                        </tr>
+                        <tr>
+                            <td>Seguro Cesantía (0.6%)</td>
+                            <td class="bg-light"></td>
+                            <td class="text-end text-danger">3.500</td>
+                        </tr>
+                        <tr>
+                            <td>Anticipo de Sueldo</td>
+                            <td class="bg-light"></td>
+                            <td class="text-end text-danger">50.000</td>
+                        </tr>
+
+                        <tr class="fw-bold bg-light">
+                            <td class="text-end">TOTALES</td>
+                            <td class="text-end">692.000</td>
+                            <td class="text-end">161.500</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="row justify-content-end mb-5">
+                <div class="col-md-6 col-8">
+                    <div class="bg-dark text-white p-4 rounded shadow-sm d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="d-block text-uppercase small opacity-75">Líquido a Pagar</span>
+                            <span class="d-block text-white small">(Transferencia Bancaria)</span>
+                        </div>
+                        <h2 class="mb-0 fw-bold">$530.500</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-5 pt-5 text-center small text-muted">
+                <div class="col-6">
+                    <div class="border-top border-dark w-75 mx-auto pt-2">
+                        Firma Empleador
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="border-top border-dark w-75 mx-auto pt-2">
+                        Firma Trabajador<br>
+                        RUT: 9.876.543-2
+                    </div>
+                </div>
+                <div class="col-12 mt-4 fst-italic">
+                    "Declaro recibir a mi entera satisfacción el saldo líquido indicado."
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body { background-color: white !important; }
+        .d-print-none, .main-header, .top-bar, .bottom-bar { display: none !important; }
+        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+        .container-fluid { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    }
+</style>
+
+{% endblock %}
