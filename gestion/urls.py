@@ -41,5 +41,9 @@ urlpatterns = [
     path('remuneraciones/parametros/', remuneraciones.parametros, name='parametros_remuneraciones'),
     path('remuneraciones/historial/', remuneraciones.historial, name='historial_remuneraciones'),
     
-    # ELIMINADO EL BLOQUE DE FLOTA CAMIONETAS
+    # ==========================================
+    # 5. MÓDULO FLOTA (CAMIONETAS)
+    # ==========================================
+    path('flota/menu/', flota_camionetas.menu_camionetas, name='menu_camionetas'),
+    # path('flota/inventario/', flota_camionetas.inventario_flota, name='inventario_flota'), # Opcional por ahora
 ]
