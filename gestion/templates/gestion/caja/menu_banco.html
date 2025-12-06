@@ -2,21 +2,22 @@
 {% load static %}
 
 {% block content %}
-<div style="width: 95%; max-width: 1500px; margin: 0 auto; padding-top: 20px; padding-bottom: 50px;">
 
-    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #ddd; padding-bottom: 15px;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 mt-3">
         
         <div>
-            <h2 class="dashboard-title" style="margin: 0; font-size: 1.8rem;">Gestión de Flujo de Caja</h2>
+            <h2 class="dashboard-title" style="margin: 0;">Gestión de Flujo de Caja</h2>
             <p style="color: var(--text-gray); margin: 5px 0 0;">Selecciona una opción para continuar</p>
         </div>
 
-        <a href="{% url 'home' %}" class="btn-workers" style="background-color: var(--lipi-blue, #0d6efd); color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: flex; align-items: center; gap: 8px; transition: opacity 0.3s;">
-            <i class="fas fa-arrow-left"></i> Volver al Inicio
-        </a>
+        <div>
+            <a href="{% url 'home' %}" class="btn-workers" style="background-color: var(--lipi-blue, #0d6efd); color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; transition: opacity 0.3s;">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+        </div>
     </div>
 
-    <div class="dashboard-grid">
+    <div class="dashboard-grid" style="justify-content: center;">
 
         <a href="{% url 'deposito_bodega' 'Manuel Peñafiel' %}" class="dashboard-card">
             <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
@@ -52,9 +53,8 @@
 
     </div>
 
-</div>
-
 <style>
+    /* Efecto hover simple */
     .btn-workers:hover {
         opacity: 0.9;
     }
@@ -63,4 +63,5 @@
         box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
     }
 </style>
+
 {% endblock %}
