@@ -55,4 +55,9 @@ urlpatterns = [
     path('remuneraciones/menu/', remuneraciones.menu_remuneraciones, name='menu_remuneraciones'),
     path('remuneraciones/nomina/', remuneraciones.nomina_mensual, name='nomina_mensual'),
     path('remuneraciones/calcular/', remuneraciones.calcular_sueldo, name='calcular_sueldo'),
+    # ... debajo de ver_liquidacion
+    path('remuneraciones/liquidacion/', remuneraciones.ver_liquidacion, name='ver_liquidacion'),
+    # NUEVA RUTA:
+    path('remuneraciones/parametros/', remuneraciones.parametros, name='parametros_remuneraciones'),
+]
 ]

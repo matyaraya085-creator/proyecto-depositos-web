@@ -36,3 +36,10 @@ def ver_liquidacion(request):
     """
     # CORRECCIÓN: Apuntamos a 'liquidacion_detalle.html'
     return render(request, 'gestion/remuneraciones/liquidacion_detalle.html')
+
+@login_required
+def parametros(request):
+    """
+    Vista de configuración de valores (UF, UTM, AFP, etc).
+    """
+    return render(request, 'gestion/remuneraciones/parametros.html')
