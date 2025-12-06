@@ -5,13 +5,14 @@
     <p class="dashboard-subtitle">Selecciona un módulo para comenzar a trabajar</p>
 
     <div class="dashboard-grid">
-        <a href="/total-dia/" class="dashboard-card">
+        
+        <a href="{% url 'total_dia' %}" class="dashboard-card">
             <div class="card-icon-circle"><i class="fas fa-cash-register card-icon"></i></div>
             <span class="card-title">Flujo de Caja Diario</span>
             <span class="card-desc">Ingresos y egresos del día</span>
         </a>
 
-        <a href="/trabajadores/" class="dashboard-card">
+        <a href="{% url 'menu_trabajadores' %}" class="dashboard-card">
             <div class="card-icon-circle"><i class="fas fa-users-cog card-icon"></i></div>
             <span class="card-title">Flujo por Trabajador</span>
             <span class="card-desc">Control individual por cada trabajador</span>
