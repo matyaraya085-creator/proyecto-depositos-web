@@ -16,11 +16,11 @@
                 color: white; 
                 padding: 10px 24px; 
                 text-decoration: none; 
-                border-radius: 50px; /* Borde más redondeado tipo píldora */
+                border-radius: 50px; 
                 display: inline-flex; 
                 align-items: center; 
                 gap: 10px; 
-                white-space: nowrap; /* ESTO ES LO QUE LO HACE PLANO */
+                white-space: nowrap; 
                 transition: transform 0.2s;
                 font-weight: 500;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -60,7 +60,7 @@
 
 <style>
     .btn-workers:hover {
-        transform: scale(1.05); /* Efecto pequeño de zoom al pasar el mouse */
+        transform: scale(1.05);
         opacity: 0.95;
     }
     .dashboard-card:hover {
