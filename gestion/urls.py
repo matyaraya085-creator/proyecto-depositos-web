@@ -60,4 +60,3 @@ urlpatterns = [
     # NUEVA RUTA:
     path('remuneraciones/parametros/', remuneraciones.parametros, name='parametros_remuneraciones'),
 ]
-]
