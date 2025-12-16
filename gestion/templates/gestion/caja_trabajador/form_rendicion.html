@@ -8,7 +8,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
         <div>
             <h2 class="fw-bold mb-0">📝 Rendición Diaria</h2>
-            <p class="text-muted mb-0">Trabajador: <span class="text-primary fw-bold">Juan Pérez (Ejemplo)</span></p>
+            <p class="text-muted mb-0">Trabajador: <span class="text-primary fw-bold">{{ trabajador_ejemplo }}</span></p>
         </div>
         <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill px-4">
             <i class="fas fa-arrow-left"></i> Volver
@@ -34,46 +34,31 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {% for gas in gas_types %}
                                 <tr>
-                                    <td class="ps-4 fw-bold">Gas 5kg</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
+                                    <td class="ps-4 fw-bold {{ gas.style }}">
+                                        {{ gas.name }}
+                                        {% if gas.weight > 0 %}
+                                            <span class="badge bg-secondary ms-1">{{ gas.weight }}kg</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <input type="number" 
+                                               name="cantidad_{{ gas.name|slugify }}" 
+                                               class="form-control text-center bg-light input-kilos" 
+                                               placeholder="0" 
+                                               value="0"
+                                               min="0"
+                                               data-weight="{{ gas.weight }}">
+                                    </td>
+                                    <td class="text-end pe-4 text-muted fw-bold total-kg-fila">0 kg</td>
                                 </tr>
-                                <tr>
-                                    <td class="ps-4 fw-bold">Gas 11kg</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-4 fw-bold">Gas 15kg</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-4 fw-bold">Gas 45kg</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-4 fw-bold text-info">5kg Catalítico</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-4 fw-bold text-info">15kg Catalítico</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-4 fw-bold text-warning">Gas Ultra</td>
-                                    <td><input type="number" class="form-control text-center bg-light" placeholder="0"></td>
-                                    <td class="text-end pe-4 text-muted fw-bold">0 kg</td>
-                                </tr>
+                                {% endfor %}
                             </tbody>
                             <tfoot class="bg-light">
                                 <tr>
                                     <td colspan="2" class="text-end fw-bold pt-3">TOTAL KILOS VENDIDOS:</td>
-                                    <td class="text-end pe-4 fw-bold fs-5 pt-3 text-primary">0 kg</td>
+                                    <td class="text-end pe-4 fw-bold fs-5 pt-3 text-primary" id="total-kilos-vendidos">0 kg</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -83,7 +68,7 @@
                         <label class="form-label fw-bold text-danger"><i class="fas fa-exclamation-circle me-1"></i> Cilindros Defectuosos</label>
                         <div class="input-group">
                             <span class="input-group-text bg-danger text-white">Cantidad</span>
-                            <input type="number" class="form-control" placeholder="0">
+                            <input type="number" name="cant_defectuosos" class="form-control" placeholder="0" value="0" min="0">
                         </div>
                     </div>
                 </div>
@@ -100,7 +85,7 @@
                             <label class="form-label fw-bold text-secondary">🔵 Lipigas (Crédito Empresa)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control form-control-lg" placeholder="0">
+                                <input type="number" name="credito_empresa" class="form-control form-control-lg input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
                             </div>
                         </div>
 
@@ -108,7 +93,7 @@
                             <label class="form-label fw-bold text-secondary">🎟️ Prepago (Vales)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control form-control-lg" placeholder="0">
+                                <input type="number" name="prepago_vales" class="form-control form-control-lg input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
                             </div>
                         </div>
 
@@ -116,7 +101,7 @@
                             <label class="form-label fw-bold text-secondary">💳 Transbank (Tarjeta)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control form-control-lg" placeholder="0">
+                                <input type="number" name="transbank" class="form-control form-control-lg input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
                             </div>
                         </div>
 
@@ -124,19 +109,29 @@
                             <label class="form-label fw-bold text-secondary">💵 Efectivo Entregado</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-success text-white">$</span>
-                                <input type="number" class="form-control form-control-lg border-success" placeholder="0">
+                                <input type="number" name="efectivo" class="form-control form-control-lg border-success input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
                             </div>
+                        </div>
+                        
+                        <hr>
+                        <div class="mb-3" style="border: 1px dashed #ccc; padding: 10px; background: #fff0f0;">
+                            <label class="form-label fw-bold text-danger small">TOTAL VENTA ESPERADA (MOCK)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="venta_esperada_mock" id="venta-esperada-mock" class="form-control form-control-lg text-danger" value="100000" readonly>
+                            </div>
+                            <div class="form-text">Este campo es solo para demo (Venta Esperada Fija).</div>
                         </div>
 
                     </div>
                 </div>
 
-                <div class="card text-center border-0 shadow-sm" style="background-color: #d1e7dd;"> <div class="card-body py-4">
+                <div class="card text-center border-0 shadow-sm" style="background-color: #d1e7dd;"> 
+                    <div class="card-body py-4">
                         <h6 class="text-uppercase fw-bold text-success mb-2">Estado de Flujo</h6>
-                        <h2 class="display-4 fw-bold text-success mb-0">$0</h2>
-                        <span class="badge bg-success rounded-pill px-3 mt-2">✨ Flujo Perfecto</span>
-                        
-                        </div>
+                        <h2 class="display-4 fw-bold text-success mb-0" id="balance-monto">$0</h2>
+                        <span class="badge bg-success rounded-pill px-3 mt-2" id="balance-texto">✨ Flujo Perfecto</span>
+                    </div>
                 </div>
 
                 <div class="d-grid gap-2 mt-4">
@@ -150,5 +145,80 @@
 
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        const kiloInputs = document.querySelectorAll('.input-kilos');
+        const balanceInputs = document.querySelectorAll('.input-balance');
+        const totalKilosDisplay = document.getElementById('total-kilos-vendidos');
+        const totalKgFilas = document.querySelectorAll('.total-kg-fila');
+        
+        const balanceMontoDisplay = document.getElementById('balance-monto');
+        const balanceTextoDisplay = document.getElementById('balance-texto');
+        const ventaEsperadaInput = document.getElementById('venta-esperada-mock');
+
+        // Función para formatear dinero (Ej: 100000 -> 100.000)
+        function formatMoney(amount) {
+            return '$' + Math.abs(amount).toLocaleString('es-CL');
+        }
+
+        // --- 1. Cálculo de Kilos Vendidos ---
+        function calcularTotalKilos() {
+            let totalKilos = 0;
+            kiloInputs.forEach((input, index) => {
+                const cantidad = parseInt(input.value) || 0;
+                const weight = parseInt(input.getAttribute('data-weight')) || 0;
+                const subtotal = cantidad * weight;
+                
+                totalKgFilas[index].textContent = `${subtotal.toLocaleString('es-CL')} kg`;
+                totalKilos += subtotal;
+            });
+            
+            totalKilosDisplay.textContent = `${totalKilos.toLocaleString('es-CL')} kg`;
+            calcularBalance(); // Llamar a calcular el balance después de los kilos
+        }
+
+        // --- 2. Cálculo de Balance de Flujo ---
+        function calcularBalance() {
+            let totalRendido = 0;
+            balanceInputs.forEach(input => {
+                totalRendido += parseInt(input.value) || 0;
+            });
+
+            // Usamos la venta esperada del campo de demostración
+            const ventaEsperada = parseInt(ventaEsperadaInput.value) || 0;
+            const balance = totalRendido - ventaEsperada;
+            
+            const colorMap = {
+                'success': {bg: 'bg-success', text: 'Flujo Perfecto', icon: '✨'},
+                'warning': {bg: 'bg-warning', text: 'SOBRANTE', icon: '⬆️'},
+                'danger': {bg: 'bg-danger', text: 'FALTANTE', icon: '⬇️'}
+            };
+
+            // Actualizar display de balance
+            if (balance === 0) {
+                balanceMontoDisplay.textContent = formatMoney(0);
+                balanceTextoDisplay.className = `badge ${colorMap.success.bg} rounded-pill px-3 mt-2 text-white`;
+                balanceTextoDisplay.innerHTML = `${colorMap.success.icon} ${colorMap.success.text}`;
+            } else {
+                const status = balance > 0 ? colorMap.warning : colorMap.danger;
+                balanceMontoDisplay.textContent = formatMoney(balance);
+                balanceMontoDisplay.className = `display-4 fw-bold text-${status.bg.replace('bg-', '')} mb-0`;
+                
+                balanceTextoDisplay.className = `badge ${status.bg} rounded-pill px-3 mt-2 text-white`;
+                balanceTextoDisplay.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${status.text} (${formatMoney(balance)})`;
+            }
+        }
+
+        // Asignar listeners
+        kiloInputs.forEach(input => input.addEventListener('input', calcularTotalKilos));
+        balanceInputs.forEach(input => input.addEventListener('input', calcularBalance));
+        ventaEsperadaInput.addEventListener('input', calcularBalance);
+        
+        // Ejecutar al cargar la página para inicializar los valores
+        calcularTotalKilos();
+    });
+</script>
 
 {% endblock %}

@@ -106,7 +106,6 @@ def resumen_consolidado(request):
 
     total_cheques_dia = datos_mp['cheques'] + datos_dp['cheques']
 
-    # Fechas bonitas
     dias_semana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
     meses = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
     dia_sem = dias_semana[fecha_seleccionada.weekday()]
@@ -287,6 +286,17 @@ def editar_lote(request, lote_id):
         lote.save() 
         return redirect('editar_lote', lote_id=lote.id)
 
+    # --- LÓGICA DE FILTRADO DE TRABAJADORES CORREGIDA ---
+    if 'Manuel' in lote.bodega_nombre: 
+        filtro_bodega = '1221'  # <--- CORREGIDO: Busca el código, no el nombre
+    else:
+        filtro_bodega = '1225'  # <--- CORREGIDO: Busca el código, no el nombre
+        
+    trabajadores_disponibles = Trabajador.objects.filter(
+        Q(bodega_asignada=filtro_bodega) | Q(bodega_asignada='Ambos')
+    ).order_by('nombre')
+    # ---------------------------------------------------
+
     aportes = lote.aportes.all().order_by('trabajador__nombre')
     desglose_guardado = {d.valor_unitario: d.cantidad for d in lote.desglose.all()}
     
@@ -303,6 +313,7 @@ def editar_lote(request, lote_id):
     context = {
         'lote': lote,
         'aportes': aportes,
+        'trabajadores_disponibles': trabajadores_disponibles, # Enviamos la lista filtrada
         'denominaciones': desglose_para_plantilla,
         'cheque_guardado': lote.total_cheques,
         'lote_esta_cerrado': lote.cerrado,
@@ -314,19 +325,14 @@ def editar_lote(request, lote_id):
 def agregar_aporte(request, lote_id):
     lote = get_object_or_404(DepositoDiario, id=lote_id)
     
-    if lote.cerrado:
-        return redirect('editar_lote', lote_id=lote.id)
-    
     if request.method == 'POST':
         trabajador_id = request.POST.get('trabajador')
         monto = request.POST.get('monto')
         descripcion = request.POST.get('descripcion', '')
         
-        if not trabajador_id or not monto:
-            pass 
-        else:
+        if trabajador_id and monto:
             trabajador = get_object_or_404(Trabajador, id=trabajador_id)
-            monto_int = int(monto) 
+            monto_int = int(monto)
 
             DepositoAporte.objects.create(
                 deposito=lote,
@@ -335,27 +341,14 @@ def agregar_aporte(request, lote_id):
                 descripcion=descripcion
             )
             
+            # Actualizar totales
             lote.total_aportes += monto_int
             total_desglose_general = lote.total_desglose + lote.total_cheques
             lote.diferencia = lote.total_aportes - total_desglose_general
             lote.save()
-            
-            return redirect('editar_lote', lote_id=lote.id)
-
-    if lote.bodega_nombre == 'Manuel Peñafiel':
-        filtro_bodega = '1221 (Manuel Peñafiel)'
-    else:
-        filtro_bodega = '1225 (David Perry)'
-        
-    trabajadores_disponibles = Trabajador.objects.filter(
-        Q(bodega_asignada=filtro_bodega) | Q(bodega_asignada='Ambos')
-    ).order_by('nombre')
     
-    context = {
-        'lote': lote,
-        'trabajadores': trabajadores_disponibles,
-    }
-    return render(request, 'gestion/caja/agregar_aporte.html', context)
+    # Redirigir siempre a la misma página (efecto "sin salir")
+    return redirect('editar_lote', lote_id=lote.id)
 
 @login_required
 def quitar_aportes_seleccion(request, lote_id):

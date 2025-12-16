@@ -8,11 +8,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-4">
         <div>
             <h2 class="fw-bold mb-0">📑 Nómina de Sueldos</h2>
-            <p class="text-muted">Periodo Actual: <span class="fw-bold text-dark">Octubre 2023</span></p>
+            <p class="text-muted">Periodo Actual: <span class="fw-bold text-dark">{{ periodo_str|default:'Octubre 2023' }}</span></p>
         </div>
         
         <div class="d-flex gap-2">
-            <input type="month" class="form-control shadow-sm" value="2023-10" style="width: auto;">
+            <input type="month" class="form-control shadow-sm" value="{{ periodo_value|default:'2023-10' }}" style="width: auto;">
             
             <a href="{% url 'menu_remuneraciones' %}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
                 <i class="fas fa-arrow-left"></i> Volver
@@ -25,7 +25,7 @@
             <div class="card border-0 shadow-sm bg-primary text-white">
                 <div class="card-body">
                     <h6 class="text-uppercase small opacity-75">Total a Pagar (Líquido)</h6>
-                    <h3 class="fw-bold mb-0">$0</h3>
+                    <h3 class="fw-bold mb-0">${{ total_a_pagar|floatformat:0|default:'0' }}</h3>
                 </div>
             </div>
         </div>
@@ -34,9 +34,21 @@
                 <div class="card-body">
                     <h6 class="text-uppercase small text-muted">Estado de Avance</h6>
                     <div class="d-flex align-items-center gap-2">
-                        <h3 class="fw-bold mb-0 text-dark">0/2</h3>
-                        <span class="badge bg-warning text-dark">Pendientes</span>
+                        <h3 class="fw-bold mb-0 text-dark">{{ calculados_count|default:'0' }}/{{ total_count|default:'0' }}</h3>
+                        {% if calculados_count == total_count and total_count > 0 %}
+                            <span class="badge bg-success">Completado</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pendientes</span>
+                        {% endif %}
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-uppercase small text-muted">Sueldo Mínimo Ref.</h6>
+                    <h3 class="fw-bold mb-0 text-dark">$460.000</h3> 
                 </div>
             </div>
         </div>
@@ -58,55 +70,53 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td class="ps-4">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold me-3" style="width: 40px; height: 40px;">JP</div>
-                                <div>
-                                    <span class="d-block fw-bold">Juan Pérez</span>
-                                    <span class="small text-muted">12.345.678-9</span>
+                    {% for t in trabajadores %}
+                        {% with liquidacion=t.liquidaciones_actuales.0 %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold me-3" style="width: 40px; height: 40px;">
+                                        {{ t.nombre|make_list|first|upper }}{{ t.nombre|cut:" "|make_list|last|upper|default:"" }}
+                                    </div>
+                                    <div>
+                                        <span class="d-block fw-bold">{{ t.nombre }}</span>
+                                        <span class="small text-muted">{{ t.rut|default:'Sin RUT' }}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td>Chofer</td>
-                        <td>$500.000</td>
-                        <td class="text-center">
-                            <span class="badge bg-light text-secondary border">⏳ Pendiente</span>
-                        </td>
-                        <td class="text-end pe-4">
-                            <a href="{% url 'calcular_sueldo' %}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
-                                <i class="fas fa-calculator me-1"></i> Calcular
-                            </a>
-                        </td>
-                    </tr>
-
+                            </td>
+                            <td>{{ t.cargo|default:'N/A' }}</td>
+                            <td>${{ t.sueldo_base|floatformat:0 }}</td>
+                            <td class="text-center">
+                                {% if liquidacion %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success">✅ Calculado</span>
+                                {% else %}
+                                    <span class="badge bg-light text-secondary border">⏳ Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                {% if liquidacion %}
+                                    <div class="btn-group">
+                                        <a href="{% url 'ver_liquidacion' liquidacion.id %}" class="btn btn-sm btn-outline-success" title="Ver Liquidación">
+                                            <i class="fas fa-file-pdf"></i> Ver
+                                        </a>
+                                        <a href="{% url 'calcular_sueldo' liquidacion.id %}" class="btn btn-sm btn-outline-secondary" title="Recalcular">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <a href="{% url 'calcular_sueldo' t.id %}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
+                                        <i class="fas fa-calculator me-1"></i> Calcular
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                    {% empty %}
                     <tr>
-                        <td class="ps-4">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-success fw-bold me-3" style="width: 40px; height: 40px;">PG</div>
-                                <div>
-                                    <span class="d-block fw-bold">Pedro González</span>
-                                    <span class="small text-muted">9.876.543-2</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>Peoneta</td>
-                        <td>$450.000</td>
-                        <td class="text-center">
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success">✅ Calculado</span>
-                        </td>
-                        <td class="text-end pe-4">
-                            <div class="btn-group">
-                                <a href="{% url 'ver_liquidacion' %}" class="btn btn-sm btn-outline-success" title="Ver Liquidación">
-                                    <i class="fas fa-file-pdf"></i> Ver
-                                </a>
-                                <a href="#" class="btn btn-sm btn-outline-secondary" title="Recalcular">
-                                    <i class="fas fa-sync-alt"></i>
-                                </a>
-                            </div>
-                        </td>
+                        <td colspan="5" class="text-center py-5 text-muted">No hay trabajadores registrados.</td>
                     </tr>
-                </tbody>
+                    {% endfor %}
+                    </tbody>
             </table>
         </div>
     </div>

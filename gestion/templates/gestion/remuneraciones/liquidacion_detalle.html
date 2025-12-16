@@ -33,7 +33,7 @@
                 <div class="col-4 text-end">
                     <div class="bg-light p-3 rounded border">
                         <span class="d-block text-secondary small fw-bold text-uppercase">Periodo</span>
-                        <span class="d-block fs-5 fw-bold text-dark">OCTUBRE 2023</span>
+                        <span class="d-block fs-5 fw-bold text-dark">{{ periodo_str }}</span>
                     </div>
                 </div>
             </div>
@@ -43,15 +43,15 @@
                     <table class="table table-sm table-borderless small mb-0">
                         <tr>
                             <td class="text-secondary fw-bold" width="120">Trabajador:</td>
-                            <td class="fw-bold text-dark fs-6">PEDRO GONZÁLEZ</td>
+                            <td class="fw-bold text-dark fs-6">{{ t.nombre }}</td>
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">RUT:</td>
-                            <td class="text-dark">9.876.543-2</td>
+                            <td class="text-dark">{{ detalle.rut|default:'N/A' }}</td>
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">Cargo:</td>
-                            <td class="text-dark">Peoneta</td>
+                            <td class="text-dark">{{ t.cargo|default:'Operario' }}</td>
                         </tr>
                     </table>
                 </div>
@@ -59,15 +59,15 @@
                     <table class="table table-sm table-borderless small mb-0">
                         <tr>
                             <td class="text-secondary fw-bold" width="140">Días Trabajados:</td>
-                            <td class="text-dark">30</td>
+                            <td class="text-dark">{{ detalle.dias_trabajados }} / 30</td>
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">Fecha Ingreso:</td>
-                            <td class="text-dark">01-03-2022</td>
+                            <td class="text-dark">{{ t.fecha_ingreso|date:"d-m-Y"|default:'N/A' }}</td>
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">Centro Costo:</td>
-                            <td class="text-dark">Bodega 1225</td>
+                            <td class="text-dark">{{ t.get_bodega_asignada_display }}</td>
                         </tr>
                     </table>
                 </div>
@@ -84,57 +84,71 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Sueldo Base</td>
-                            <td class="text-end">450.000</td>
+                            <td>Sueldo Base ({{ detalle.dias_trabajados }} días)</td>
+                            <td class="text-end">{{ detalle.sueldo_base|floatformat:0 }}</td>
                             <td class="bg-light"></td>
                         </tr>
                         <tr>
-                            <td>Gratificación Legal (25%)</td>
-                            <td class="text-end">152.000</td>
+                            <td>Gratificación Legal ({{ detalle.gratificacion|floatformat:0 }})</td>
+                            <td class="text-end">{{ detalle.gratificacion|floatformat:0 }}</td>
                             <td class="bg-light"></td>
                         </tr>
+                        {% if detalle.horas_extras > 0 %}
                         <tr>
-                            <td>Horas Extras (5 hrs)</td>
-                            <td class="text-end">25.000</td>
+                            <td>Horas Extras ({{ detalle.horas_extras|floatformat:1 }} hrs)</td>
+                            <td class="text-end">{{ detalle.monto_horas_extras|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                        {% endif %}
+                        {% if detalle.monto_bonos > 0 %}
+                        <tr>
+                            <td>Otros Haberes (Bonos no imponibles)</td>
+                            <td class="text-end">{{ detalle.monto_bonos|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                        {% endif %}
+                        
+                        <tr class="table-info small text-uppercase">
+                            <td>TOTAL HABERES IMPONIBLES Y NO IMPONIBLES</td>
+                            <td class="text-end fw-bold">{{ total_haberes_brutos|floatformat:0 }}</td>
                             <td class="bg-light"></td>
                         </tr>
 
-                        <tr>
-                            <td>Movilización y Colación</td>
-                            <td class="text-end">50.000</td>
+                        {% if detalle.asignacion_familiar > 0 %}
+                        <tr class="table-success small text-uppercase">
+                            <td>Asignación Familiar ({{ t.cargas_familiares|default:0 }} cargas)</td>
+                            <td class="text-end fw-bold">{{ detalle.asignacion_familiar|floatformat:0 }}</td>
                             <td class="bg-light"></td>
                         </tr>
-                        <tr>
-                            <td>Asignación Familiar (2 cargas)</td>
-                            <td class="text-end">15.000</td>
-                            <td class="bg-light"></td>
-                        </tr>
+                        {% endif %}
 
                         <tr>
-                            <td>Cotización AFP (Modelo 10.58%)</td>
+                            <td>Cotización AFP ({{ detalle.afp_nombre }} - {{ detalle.afp_tasa|floatformat:2 }}%)</td>
                             <td class="bg-light"></td>
-                            <td class="text-end text-danger">65.000</td>
+                            <td class="text-end text-danger">{{ detalle.monto_afp|floatformat:0 }}</td>
                         </tr>
                         <tr>
-                            <td>Cotización Salud (Fonasa 7%)</td>
+                            <td>Cotización Salud ({{ detalle.salud_nombre }} - {{ detalle.salud_tasa|floatformat:1 }}%)</td>
                             <td class="bg-light"></td>
-                            <td class="text-end text-danger">43.000</td>
+                            <td class="text-end text-danger">{{ detalle.monto_salud|floatformat:0 }}</td>
                         </tr>
-                        <tr>
-                            <td>Seguro Cesantía (0.6%)</td>
+                         <tr>
+                            <td>Seguro Cesantía ({{ detalle.monto_seguro_cesantia|floatformat:0 }})</td>
                             <td class="bg-light"></td>
-                            <td class="text-end text-danger">3.500</td>
+                            <td class="text-end text-danger">{{ detalle.monto_seguro_cesantia|floatformat:0 }}</td>
                         </tr>
+                        {% if detalle.monto_anticipo > 0 %}
                         <tr>
                             <td>Anticipo de Sueldo</td>
                             <td class="bg-light"></td>
-                            <td class="text-end text-danger">50.000</td>
+                            <td class="text-end text-danger">{{ detalle.monto_anticipo|floatformat:0 }}</td>
                         </tr>
+                        {% endif %}
 
                         <tr class="fw-bold bg-light">
                             <td class="text-end">TOTALES</td>
-                            <td class="text-end">692.000</td>
-                            <td class="text-end">161.500</td>
+                            <td class="text-end">{{ liquidacion.total_haberes|floatformat:0 }}</td>
+                            <td class="text-end">{{ liquidacion.total_descuentos|floatformat:0 }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -145,41 +159,4 @@
                     <div class="bg-dark text-white p-4 rounded shadow-sm d-flex justify-content-between align-items-center">
                         <div>
                             <span class="d-block text-uppercase small opacity-75">Líquido a Pagar</span>
-                            <span class="d-block text-white small">(Transferencia Bancaria)</span>
-                        </div>
-                        <h2 class="mb-0 fw-bold">$530.500</h2>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-5 pt-5 text-center small text-muted">
-                <div class="col-6">
-                    <div class="border-top border-dark w-75 mx-auto pt-2">
-                        Firma Empleador
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="border-top border-dark w-75 mx-auto pt-2">
-                        Firma Trabajador<br>
-                        RUT: 9.876.543-2
-                    </div>
-                </div>
-                <div class="col-12 mt-4 fst-italic">
-                    "Declaro recibir a mi entera satisfacción el saldo líquido indicado."
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<style>
-    @media print {
-        body { background-color: white !important; }
-        .d-print-none, .main-header, .top-bar, .bottom-bar { display: none !important; }
-        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
-        .container-fluid { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-    }
-</style>
-
-{% endblock %}
+                            <span class="

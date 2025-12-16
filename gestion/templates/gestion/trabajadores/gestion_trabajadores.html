@@ -1,5 +1,6 @@
 {% extends 'gestion/core/base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -7,11 +8,17 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark">🧑‍💼 Gestión de Trabajadores</h2>
-            <p class="text-muted">Administra el personal y sus asignaciones de bodega.</p>
+            <p class="text-muted">Administra el personal, contratos y asignaciones en una sola vista.</p>
         </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregar">
-            <i class="fas fa-plus-circle"></i> Nuevo Trabajador
-        </button>
+        
+        <div class="d-flex gap-2">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+                <i class="fas fa-plus-circle"></i> Nuevo Trabajador
+            </button>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0">
@@ -20,27 +27,50 @@
                 <thead class="bg-light text-dark">
                     <tr>
                         <th class="ps-4">Nombre Completo</th>
-                        <th>Bodega Asignada</th>
-                        <th class="text-end pe-4">Acciones</th>
+                        <th>Bodega</th>
+                        <th class="text-center">Estado Ficha</th> <th class="text-end pe-4">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in trabajadores %}
                     <tr>
-                        <td class="ps-4 fw-bold text-secondary">{{ t.nombre }}</td>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ t.nombre }}</div>
+                            <small class="text-muted">{{ t.cargo|default:"Sin cargo" }}</small>
+                        </td>
                         <td>
-                            <span class="badge bg-info text-dark">
-                                {{ t.get_bodega_asignada_display }}
-                            </span>
+                            {% if t.bodega_asignada == '1221' %}
+                                <span class="badge bg-primary">Bodega 1221</span>
+                            {% elif t.bodega_asignada == '1225' %}
+                                <span class="badge bg-success">Bodega 1225</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Ambas</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if t.rut and t.afp %}
+                                <i class="fas fa-check-circle text-success fs-4" title="Datos Completos"></i>
+                            {% else %}
+                                <i class="fas fa-exclamation-circle text-warning fs-4" title="Faltan datos (RUT o AFP)"></i>
+                            {% endif %}
                         </td>
                         <td class="text-end pe-4">
-                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar" 
+                            <button class="btn btn-sm btn-outline-primary me-1" 
                                     data-bs-toggle="modal" 
-                                    data-bs-target="#modalEditar"
+                                    data-bs-target="#modalEditarCompleto"
                                     data-id="{{ t.id }}"
                                     data-nombre="{{ t.nombre }}"
-                                    data-bodega="{{ t.bodega_asignada }}">
-                                <i class="fas fa-edit"></i>
+                                    data-rut="{{ t.rut|default:'' }}"
+                                    data-fecha="{{ t.fecha_ingreso|date:'Y-m-d' }}"
+                                    data-cargo="{{ t.cargo|default:'' }}"
+                                    data-bodega="{{ t.bodega_asignada }}"
+                                    data-sueldo="{{ t.sueldo_base }}"
+                                    data-extra="{{ t.valor_hora_extra }}"
+                                    data-afp="{{ t.afp.id|default:'' }}"
+                                    data-salud="{{ t.salud.id|default:'' }}"
+                                    data-asignacion="{{ t.tiene_asignacion_familiar|yesno:'SI,NO' }}"
+                                    data-cargas="{{ t.cargas_familiares }}">
+                                <i class="fas fa-edit"></i> Editar
                             </button>
                             
                             <form method="POST" action="{% url 'eliminar_trabajador' t.id %}" style="display: inline;">
@@ -54,10 +84,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <i class="fas fa-users-slash fa-2x mb-3"></i><br>
-                            No hay trabajadores registrados.
-                        </td>
+                        <td colspan="4" class="text-center py-5 text-muted">No hay trabajadores registrados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -71,60 +98,130 @@
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">➕ Nuevo Trabajador</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{% url 'agregar_trabajador' %}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nombre Completo</label>
-                        <input type="text" name="nombre" class="form-control" required placeholder="Ej: Juan Pérez">
+                        <input type="text" name="nombre" class="form-control" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Bodega Asignada</label>
                         <select name="bodega" class="form-select" required>
-                            <option value="" selected disabled>Seleccione...</option>
-                            <option value="1221">Bodega 1221 (Manuel Peñafiel)</option>
-                            <option value="1225">Bodega 1225 (David Perry)</option>
-                            <option value="AMBAS">Ambas Bodegas</option>
+                            <option value="1221">Bodega 1221</option>
+                            <option value="1225">Bodega 1225</option>
+                            <option value="Ambos">Ambas Bodegas</option>
                         </select>
+                    </div>
+                    <div class="alert alert-light border small">
+                        <i class="fas fa-info-circle"></i> Podrás agregar sueldos y RUT en el botón "Editar" una vez creado.
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="submit" class="btn btn-primary">Crear</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="modalEditarCompleto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg"> <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">✏️ Editar Trabajador</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-edit"></i> Ficha Completa del Trabajador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="formEditar">
+            
+            <form method="POST" id="formEditarCompleto">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre Completo</label>
-                        <input type="text" name="nombre" id="editNombre" class="form-control" required>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Nombre</label>
+                            <input type="text" name="nombre" id="editNombre" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary">RUT</label>
+                            <input type="text" name="rut" id="editRut" class="form-control" placeholder="12.345.678-9">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary">Ingreso</label>
+                            <input type="date" name="fecha_ingreso" id="editFecha" class="form-control">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Bodega Asignada</label>
-                        <select name="bodega" id="editBodega" class="form-select" required>
-                            <option value="1221">Bodega 1221 (Manuel Peñafiel)</option>
-                            <option value="1225">Bodega 1225 (David Perry)</option>
-                            <option value="AMBAS">Ambas Bodegas</option>
-                        </select>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Cargo</label>
+                            <input type="text" name="cargo" id="editCargo" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Bodega</label>
+                            <select name="bodega" id="editBodega" class="form-select">
+                                <option value="1221">Bodega 1221</option>
+                                <option value="1225">Bodega 1225</option>
+                                <option value="Ambos">Ambos</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <hr>
+
+                    <h6 class="text-primary small fw-bold">DATOS REMUNERACIÓN</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Sueldo Base ($)</label>
+                            <input type="number" name="sueldo_base" id="editSueldo" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Valor Hora Extra ($)</label>
+                            <input type="number" name="valor_hora_extra" id="editExtra" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">AFP</label>
+                            <select name="afp" id="editAfp" class="form-select">
+                                <option value="">Seleccione...</option>
+                                {% for afp in afps %}
+                                    <option value="{{ afp.id }}">{{ afp.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Salud</label>
+                            <select name="salud" id="editSalud" class="form-select">
+                                <option value="">Seleccione...</option>
+                                {% for salud in saluds %}
+                                    <option value="{{ salud.id }}">{{ salud.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Asig. Familiar</label>
+                            <select name="tiene_asignacion" id="editAsignacion" class="form-select">
+                                <option value="NO">NO</option>
+                                <option value="SI">SI</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">N° Hijos</label>
+                            <input type="number" name="cargas" id="editCargas" class="form-control">
+                        </div>
+                    </div>
+
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-warning fw-bold">Guardar Todo</button>
                 </div>
             </form>
         </div>
@@ -133,31 +230,39 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var modalEditar = document.getElementById('modalEditar');
+        var modalEditar = document.getElementById('modalEditarCompleto');
         
         modalEditar.addEventListener('show.bs.modal', function (event) {
-            // Botón que activó el modal
             var button = event.relatedTarget;
             
-            // Extraer info de los atributos data-*
             var id = button.getAttribute('data-id');
             var nombre = button.getAttribute('data-nombre');
+            var rut = button.getAttribute('data-rut');
+            var fecha = button.getAttribute('data-fecha');
+            var cargo = button.getAttribute('data-cargo');
             var bodega = button.getAttribute('data-bodega');
-            
-            // Referencias a los inputs del modal
-            var inputNombre = document.getElementById('editNombre');
-            var inputBodega = document.getElementById('editBodega');
-            var form = document.getElementById('formEditar');
+            var sueldo = button.getAttribute('data-sueldo');
+            var extra = button.getAttribute('data-extra');
+            var afp = button.getAttribute('data-afp');
+            var salud = button.getAttribute('data-salud');
+            var asignacion = button.getAttribute('data-asignacion');
+            var cargas = button.getAttribute('data-cargas');
 
-            // Asignar valores
-            inputNombre.value = nombre;
-            inputBodega.value = bodega;
+            document.getElementById('editNombre').value = nombre;
+            document.getElementById('editRut').value = rut;
+            document.getElementById('editFecha').value = fecha;
+            document.getElementById('editCargo').value = cargo;
+            document.getElementById('editBodega').value = bodega;
+            document.getElementById('editSueldo').value = sueldo;
+            document.getElementById('editExtra').value = extra;
+            document.getElementById('editAfp').value = afp;
+            document.getElementById('editSalud').value = salud;
+            document.getElementById('editAsignacion').value = asignacion;
+            document.getElementById('editCargas').value = cargas;
 
-            // ACTUALIZACIÓN IMPORTANTE: 
-            // La URL ahora coincide con urls.py: /trabajadores/ID/editar/
+            var form = document.getElementById('formEditarCompleto');
             form.action = "/trabajadores/" + id + "/editar/"; 
         });
     });
 </script>
-
 {% endblock %}

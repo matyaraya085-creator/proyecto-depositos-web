@@ -7,9 +7,16 @@
             <h2 class="fw-bold text-dark">Control de Flota</h2>
             <p class="text-muted">Monitoreo de vencimientos y kilometraje en tiempo real</p>
         </div>
-        <button class="btn btn-primary btn-lg shadow-sm">
-            <i class="fas fa-plus-circle me-2"></i>Nueva Camioneta
-        </button>
+        
+        <div class="d-flex gap-2 align-items-center">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+            
+            <button type="button" class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+                <i class="fas fa-plus-circle me-2"></i>Nueva Camioneta
+            </button>
+        </div>
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -19,10 +26,11 @@
                     <thead class="bg-light">
                         <tr>
                             <th class="py-3 ps-4">Patente</th>
-                            <th class="py-3">Estado General</th>
-                            <th class="py-3">Mantención</th>
-                            <th class="py-3">Permiso</th>
-                            <th class="py-3">Kilometraje</th>
+                            <th class="py-3">Fecha Mantención</th>
+                            <th class="py-3">Fecha Permiso</th>
+                            <th class="py-3">KM Actual</th>
+                            <th class="py-3">KM Máx.</th>
+                            <th class="py-3 text-center">Estado</th>
                             <th class="py-3 text-end pe-4">Acciones</th>
                         </tr>
                     </thead>
@@ -32,38 +40,50 @@
                             
                             <td class="ps-4 fw-bold">{{ v.patente }}</td>
                             
-                            <td>
-                                {% for alerta in v.alertas %}
-                                    <div class="small mb-1">
-                                        {{ alerta }}
-                                    </div>
-                                {% endfor %}
-                            </td>
-
-                            <td>
-                                {{ v.fecha_mantencion|date:"d/m/Y"|default:"-" }}
-                            </td>
+                            <td>{{ v.fecha_mantencion|date:"d/m/Y"|default:"-" }}</td>
                             
-                            <td>
-                                {{ v.fecha_permiso|date:"d/m/Y"|default:"-" }}
-                            </td>
+                            <td>{{ v.fecha_permiso|date:"d/m/Y"|default:"-" }}</td>
 
-                            <td>
-                                <div class="d-flex flex-column">
-                                    <span class="fw-bold">{{ v.km_actual }} km</span>
-                                    <span class="small text-muted">Max: {{ v.km_max }}</span>
-                                </div>
+                            <td><span class="fw-bold">{{ v.km_actual }} km</span></td>
+                            
+                            <td><span class="text-muted">{{ v.km_max }} km</span></td>
+                            
+                            <td class="text-center">
+                                {% if v.alertas %}
+                                    {% for alerta in v.alertas %}
+                                        <span class="badge bg-danger text-white mb-1">{{ alerta }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="badge bg-success">🟢 Todo Bien</span>
+                                {% endif %}
                             </td>
 
                             <td class="text-end pe-4">
-                                <button class="btn btn-sm btn-outline-dark" title="Editar">
+                                <button class="btn btn-sm btn-outline-primary me-1 btn-editar"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalEditar"
+                                        data-patente="{{ v.patente }}"
+                                        data-mant="{{ v.fecha_mantencion|date:'Y-m-d' }}"
+                                        data-perm="{{ v.fecha_permiso|date:'Y-m-d' }}"
+                                        data-km="{{ v.km_actual }}"
+                                        data-kmmax="{{ v.km_max }}"
+                                        data-kmdiarios="{{ v.km_diarios|default:'0' }}"
+                                        data-diassemana="{{ v.dias_semana|default:'0' }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
+                                
+                                <form method="POST" action="{% url 'eliminar_vehiculo' v.patente %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('¿Eliminar vehículo {{ v.patente }}?')">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="fas fa-truck-pickup fa-3x mb-3"></i>
                                 <p>No hay vehículos registrados en la flota.</p>
                             </td>
@@ -75,4 +95,150 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalAgregar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">➕ Nueva Camioneta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'agregar_vehiculo' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Patente</label>
+                        <input type="text" name="patente" class="form-control" required placeholder="Ej: ABCD12" maxlength="6">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha Mantención Vence</label>
+                            <input type="date" name="fecha_mantencion" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha Permiso Circulación Vence</label>
+                            <input type="date" name="fecha_circulacion" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Kilometraje Actual</label>
+                            <input type="number" name="kilometraje" class="form-control" required value="0" min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Kilometraje Máximo</label>
+                            <input type="number" name="kilometraje_maximo" class="form-control" required value="0" min="0">
+                        </div>
+                    </div>
+                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">KM Diarios (Promedio)</label>
+                            <input type="number" name="km_diarios" class="form-control" required value="0" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Días Uso (a la semana)</label>
+                            <input type="number" name="dias_semana" class="form-control" required value="5" min="0" max="7">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Vehículo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">✏️ Editar Camioneta <span id="editPatenteDisplay" class="fw-bold"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="formEditar">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Patente (No editable)</label>
+                        <input type="text" name="patente" id="editPatenteHidden" class="form-control" readonly>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha Mantención Vence</label>
+                            <input type="date" name="fecha_mantencion" id="editFechaMant" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha Permiso Circulación Vence</label>
+                            <input type="date" name="fecha_circulacion" id="editFechaPerm" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Kilometraje Actual</label>
+                            <input type="number" name="kilometraje" id="editKm" class="form-control" required value="0" min="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Kilometraje Máximo</label>
+                            <input type="number" name="kilometraje_maximo" id="editKmMax" class="form-control" required value="0" min="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">KM Diarios (Promedio)</label>
+                            <input type="number" name="km_diarios" id="editKmDiarios" class="form-control" required value="0" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Días Uso (a la semana)</label>
+                            <input type="number" name="dias_semana" id="editDiasSemana" class="form-control" required value="5" min="0" max="7">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modalEditar = document.getElementById('modalEditar');
+        
+        modalEditar.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            
+            // Extraer info de los atributos data-*
+            var patente = button.getAttribute('data-patente');
+            var mantencion = button.getAttribute('data-mant');
+            var permiso = button.getAttribute('data-perm');
+            var km = button.getAttribute('data-km');
+            var kmmax = button.getAttribute('data-kmmax');
+            var kmdiarios = button.getAttribute('data-kmdiarios');
+            var diassemana = button.getAttribute('data-diassemana');
+            
+            // Referencias a los inputs del modal
+            var form = document.getElementById('formEditar');
+
+            // Asignar valores
+            document.getElementById('editPatenteDisplay').textContent = patente;
+            document.getElementById('editPatenteHidden').value = patente; // Campo no editable
+            document.getElementById('editFechaMant').value = mantencion;
+            document.getElementById('editFechaPerm').value = permiso;
+            document.getElementById('editKm').value = km;
+            document.getElementById('editKmMax').value = kmmax;
+            document.getElementById('editKmDiarios').value = kmdiarios;
+            document.getElementById('editDiasSemana').value = diassemana;
+
+            // Define la acción del formulario (se asume que existe una URL 'editar_vehiculo' que acepta la patente)
+            form.action = "/flota/" + patente.replace(/[^a-zA-Z0-9]/g, '') + "/editar/"; 
+        });
+    });
+</script>
+
 {% endblock %}

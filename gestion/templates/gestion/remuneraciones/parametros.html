@@ -15,6 +15,20 @@
         </a>
     </div>
 
+    {% if db_vacia %}
+    <div class="alert alert-danger shadow-sm d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-1 fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Base de Datos de Parámetros Vacía</h5>
+            <p class="mb-0">Ejecuta la inicialización para cargar las AFP, Salud y Tramos con valores de referencia (ej. Fonasa 7.0%, AFP Modelo, Tramos 2023).</p>
+        </div>
+        <a href="{% url 'inicializar_parametros' %}" 
+           onclick="return confirm('¿Confirmas que deseas inicializar los parámetros? Esto insertará los valores por defecto de AFP, Salud y Tramos en la base de datos.')"
+           class="btn btn-danger btn-lg rounded-pill fw-bold" style="white-space: nowrap;">
+           <i class="fas fa-database me-2"></i> Inicializar
+        </a>
+    </div>
+    {% endif %}
+    
     <div class="row">
         
         <div class="col-lg-4 mb-4">
@@ -23,47 +37,48 @@
                     <h5 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2"></i>Indicadores Económicos</h5>
                 </div>
                 <div class="card-body">
-                    <form>
+                    <form method="POST" action="{% url 'guardar_indicadores' %}">
+                        {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted">SUELDO MÍNIMO</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="text" class="form-control fw-bold" value="460.000">
+                                <input type="text" name="sueldo_minimo" class="form-control fw-bold" value="{{ config.sueldo_minimo }}">
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted">VALOR UF (Previsional)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="text" class="form-control fw-bold" value="36.500,00">
+                                <input type="text" name="valor_uf" class="form-control fw-bold" value="{{ config.valor_uf }}">
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted">VALOR UTM</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="text" class="form-control fw-bold" value="63.450">
+                                <input type="text" name="valor_utm" class="form-control fw-bold" value="{{ config.valor_utm }}">
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted">% GRATIFICACIÓN LEGAL</label>
                             <div class="input-group">
-                                <input type="number" class="form-control fw-bold" value="25">
+                                <input type="number" name="gratificacion_legal_pct" class="form-control fw-bold" value="{{ config.gratificacion_legal_pct }}">
                                 <span class="input-group-text">%</span>
                             </div>
                         </div>
                         <div class="d-grid mt-4">
-                            <button class="btn btn-warning text-dark fw-bold rounded-pill">Guardar Indicadores</button>
+                            <button type="submit" class="btn btn-warning text-dark fw-bold rounded-pill">Guardar Indicadores</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4 mb-4">
+       <div class="col-lg-4 mb-4">
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white py-3 border-bottom">
-                    <h6 class="mb-0 fw-bold text-primary">Administradoras de Fondos (AFP)</h6>
+                    <h5 class="mb-0 fw-bold text-primary">Administradoras de Fondos (AFP)</h5>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm table-hover mb-0 align-middle">
@@ -75,26 +90,15 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% for afp in afps %}
                             <tr>
-                                <td class="ps-3">Capital</td>
-                                <td class="text-center fw-bold">11.44%</td>
-                                <td class="text-end pe-3"><a href="#" class="text-muted"><i class="fas fa-edit"></i></a></td>
+                                <td class="ps-3">{{ afp.nombre }}</td>
+                                <td class="text-center fw-bold">{{ afp.tasa|floatformat:2 }}%</td>
+                                <td class="text-end pe-3">
+                                    <a href="{% url 'editar_tasa_previsional' modelo='afp' nombre=afp.nombre %}" class="text-muted" title="Editar Tasa"><i class="fas fa-edit"></i></a>
+                                </td>
                             </tr>
-                            <tr>
-                                <td class="ps-3">Cuprum</td>
-                                <td class="text-center fw-bold">11.44%</td>
-                                <td class="text-end pe-3"><a href="#" class="text-muted"><i class="fas fa-edit"></i></a></td>
-                            </tr>
-                            <tr>
-                                <td class="ps-3">Habitat</td>
-                                <td class="text-center fw-bold">11.27%</td>
-                                <td class="text-end pe-3"><a href="#" class="text-muted"><i class="fas fa-edit"></i></a></td>
-                            </tr>
-                            <tr>
-                                <td class="ps-3">Modelo</td>
-                                <td class="text-center fw-bold">10.58%</td>
-                                <td class="text-end pe-3"><a href="#" class="text-muted"><i class="fas fa-edit"></i></a></td>
-                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -102,7 +106,7 @@
 
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white py-3 border-bottom">
-                    <h6 class="mb-0 fw-bold text-success">Instituciones de Salud</h6>
+                    <h5 class="mb-0 fw-bold text-success">Instituciones de Salud</h5>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm table-hover mb-0 align-middle">
@@ -114,16 +118,15 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% for salud_inst in salud %}
                             <tr>
-                                <td class="ps-3">Fonasa</td>
-                                <td class="text-center fw-bold">7.0%</td>
-                                <td class="text-end pe-3"><a href="#" class="text-muted"><i class="fas fa-edit"></i></a></td>
+                                <td class="ps-3">{{ salud_inst.nombre }}</td>
+                                <td class="text-center fw-bold">{{ salud_inst.tasa|floatformat:1 }}{% if salud_inst.nombre == 'Isapre' %}+{% else %}%{% endif %}</td>
+                                <td class="text-end pe-3">
+                                    <a href="{% url 'editar_tasa_previsional' modelo='salud' nombre=salud_inst.nombre %}" class="text-muted" title="Editar Tasa"><i class="fas fa-edit"></i></a>
+                                </td>
                             </tr>
-                            <tr>
-                                <td class="ps-3">Isapre</td>
-                                <td class="text-center fw-bold">7.0% +</td>
-                                <td class="text-end pe-3"><a href="#" class="text-muted"><i class="fas fa-edit"></i></a></td>
-                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -131,50 +134,39 @@
         </div>
 
         <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-info text-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-child me-2"></i>Asignación Familiar</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped mb-0">
-                            <thead class="bg-light">
-                                <tr class="small text-uppercase">
-                                    <th class="ps-3">Tramo</th>
-                                    <th>Renta Tope</th>
-                                    <th class="text-end pe-3">Monto ($)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="ps-3 fw-bold">A</td>
-                                    <td>$539.328</td>
-                                    <td class="text-end pe-3 fw-bold">$20.328</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-3 fw-bold">B</td>
-                                    <td>$787.746</td>
-                                    <td class="text-end pe-3 fw-bold">$12.475</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-3 fw-bold">C</td>
-                                    <td>$1.228.614</td>
-                                    <td class="text-end pe-3 fw-bold">$3.942</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-3 fw-bold">D</td>
-                                    <td>> $1.228.614</td>
-                                    <td class="text-end pe-3 fw-bold">$0</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="p-3 text-center">
-                        <button class="btn btn-sm btn-outline-info rounded-pill">Editar Tramos</button>
-                    </div>
-                </div>
+    <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-info text-white py-3">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-child me-2"></i>Asignación Familiar</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead class="bg-light">
+                        <tr class="small text-uppercase">
+                            <th class="ps-3">Tramo</th>
+                            <th>Renta Tope</th>
+                            <th class="text-end pe-3">Monto ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tramo in tramos %}
+                        <tr>
+                            <td class="ps-3 fw-bold">{{ tramo.tramo }}</td>
+                            <td>{% if tramo.tramo == 'D' %}> {% endif %}${{ tramo.ingreso_tope|floatformat:0 }}</td>
+                            <td class="text-end pe-3 fw-bold">${{ tramo.monto_por_carga|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-3 text-center">
+                <a href="{% url 'editar_tramos_asignacion' %}" class="btn btn-sm btn-outline-info rounded-pill">
+    Editar Tramos
+</a>
             </div>
         </div>
+    </div>
+</div>
 
     </div>
 </div>

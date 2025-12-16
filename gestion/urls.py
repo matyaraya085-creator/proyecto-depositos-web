@@ -1,16 +1,18 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-# AQUÍ ESTABA EL ERROR: Faltaba agregar 'flota_camionetas' al final de esta línea 👇
 from gestion.views import core, banco, trabajadores, caja_trabajador, remuneraciones, flota_camionetas
+from . import views
 
 urlpatterns = [
     # ==========================================
-    # 1. CORE (Login y Home)
+    # 1. CORE (Login, Home y Logout personalizado)
     # ==========================================
     path('', core.home, name='index'),
     path('home/', core.home, name='home'),
     path('accounts/login/', auth_views.LoginView.as_view(template_name='gestion/core/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    
+    # CAMBIO IMPORTANTE: Usamos tu nueva función personalizada
+    path('logout/', core.cerrar_sesion, name='logout'),
 
     # ==========================================
     # 2. MÓDULO BANCO
@@ -38,19 +40,27 @@ urlpatterns = [
     path('trabajadores/agregar/', trabajadores.agregar_trabajador, name='agregar_trabajador'),
     path('trabajadores/<int:trabajador_id>/editar/', trabajadores.editar_trabajador, name='editar_trabajador'),
     path('trabajadores/<int:trabajador_id>/eliminar/', trabajadores.eliminar_trabajador, name='eliminar_trabajador'),
+    path('trabajadores/rendicion/<int:trabajador_id>/', caja_trabajador.form_rendicion, name='form_rendicion'),
 
     # ==========================================
     # 4. MÓDULO REMUNERACIONES
     # ==========================================
     path('remuneraciones/menu/', remuneraciones.menu_remuneraciones, name='menu_remuneraciones'),
     path('remuneraciones/nomina/', remuneraciones.nomina_mensual, name='nomina_mensual'),
-    path('remuneraciones/calcular/', remuneraciones.calcular_sueldo, name='calcular_sueldo'),
-    path('remuneraciones/liquidacion/', remuneraciones.ver_liquidacion, name='ver_liquidacion'),
+    path('remuneraciones/calcular/<int:id>/', remuneraciones.calcular_sueldo, name='calcular_sueldo'),
+    path('remuneraciones/liquidacion/<int:id>/', remuneraciones.ver_liquidacion, name='ver_liquidacion'),
     path('remuneraciones/parametros/', remuneraciones.parametros, name='parametros_remuneraciones'),
     path('remuneraciones/historial/', remuneraciones.historial, name='historial_remuneraciones'),
+    path('remuneraciones/inicializar-db/', remuneraciones.inicializar_parametros_remuneraciones, name='inicializar_parametros'),
+    path('remuneraciones/guardar-indicadores/', remuneraciones.guardar_indicadores, name='guardar_indicadores'),
+    path('remuneraciones/tasa/<str:modelo>/<str:nombre>/editar/', remuneraciones.editar_tasa_previsional, name='editar_tasa_previsional'),
+    path('remuneraciones/tramos/editar/', remuneraciones.editar_tramos_asignacion, name='editar_tramos_asignacion'),
 
     # ==========================================
     # 5. MÓDULO FLOTA (CAMIONETAS)
     # ==========================================
     path('flota/menu/', flota_camionetas.menu_camionetas, name='menu_camionetas'),
+    path('flota/agregar/', flota_camionetas.agregar_vehiculo, name='agregar_vehiculo'),
+    path('flota/<str:patente>/editar/', flota_camionetas.editar_vehiculo, name='editar_vehiculo'),
+    path('flota/<str:patente>/eliminar/', flota_camionetas.eliminar_vehiculo, name='eliminar_vehiculo'),
 ]

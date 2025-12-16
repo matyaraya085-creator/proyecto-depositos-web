@@ -8,7 +8,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
         <div>
             <h2 class="fw-bold mb-0">🧮 Calcular Remuneración</h2>
-            <p class="text-muted mb-0">Trabajador: <span class="text-primary fw-bold">Juan Pérez</span> | Periodo: <span class="fw-bold text-dark">Octubre 2023</span></p>
+            <p class="text-muted mb-0">Trabajador: <span class="text-primary fw-bold">{{ trabajador.nombre }}</span> | Periodo: <span class="fw-bold text-dark">{{ periodo_str }}</span></p>
         </div>
         <a href="{% url 'nomina_mensual' %}" class="btn btn-outline-secondary rounded-pill px-4">
             <i class="fas fa-times me-2"></i> Cancelar
@@ -29,14 +29,14 @@
                         
                         <div class="mb-4">
                             <label class="form-label fw-bold text-secondary">📅 Días Trabajados</label>
-                            <input type="number" name="dias" class="form-control form-control-lg text-center fw-bold" value="30" min="0" max="30">
+                            <input type="number" name="dias" class="form-control form-control-lg text-center fw-bold" value="{{ initial.dias }}" min="0" max="30">
                             <div class="form-text">Lo estándar son 30 días.</div>
                         </div>
 
                         <div class="mb-2">
                             <label class="form-label fw-bold text-secondary">⏱️ Horas Extras</label>
                             <div class="input-group input-group-lg">
-                                <input type="number" name="horas_extras" class="form-control text-center fw-bold" value="0" min="0" step="0.5">
+                                <input type="number" name="horas_extras" class="form-control text-center fw-bold" value="{{ initial.horas_extras }}" min="0" step="0.5">
                                 <span class="input-group-text bg-light">Hrs</span>
                             </div>
                         </div>
@@ -56,7 +56,7 @@
                             <label class="form-label fw-bold text-secondary">🎁 Otros Haberes (Bonos/Aguinaldos)</label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text text-success">$</span>
-                                <input type="number" name="bonos" class="form-control fw-bold" placeholder="0">
+                                <input type="number" name="bonos" class="form-control fw-bold" value="{{ initial.bonos }}" placeholder="0">
                             </div>
                             <div class="form-text">Montos no imponibles o bonos especiales.</div>
                         </div>
@@ -65,7 +65,7 @@
                             <label class="form-label fw-bold text-secondary">💸 Anticipos (Descuento)</label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text text-danger">$</span>
-                                <input type="number" name="anticipo" class="form-control fw-bold text-danger" placeholder="0">
+                                <input type="number" name="anticipo" class="form-control fw-bold text-danger" value="{{ initial.anticipo }}" placeholder="0">
                             </div>
                         </div>
 

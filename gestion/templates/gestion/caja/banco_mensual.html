@@ -1,106 +1,181 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reportes Mensuales</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+{% extends 'gestion/core/base.html' %}
 
-    <div class="container-fluid p-4">
+{% block content %}
+<div style="width: 95%; max-width: 1500px; margin: 0 auto; padding-bottom: 50px;">
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>📊 Reportes Mensuales</h1>
-            <a href="{% url 'home' %}" class="btn btn-secondary">
-                ⬅️ Volver al Home
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #ddd; padding-bottom: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'home' %}" class="btn-workers" style="background-color: var(--lipi-blue); color: white; padding: 8px 15px; text-decoration: none; border-radius: 6px; font-family: 'Poppins', sans-serif;">
+                <i class="fas fa-arrow-left"></i> Volver al Home
             </a>
+            <h2 class="dashboard-title" style="margin: 0; font-size: 1.6rem; color: #333;">Reportes Mensuales</h2>
         </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
         
-        <form method="GET" action="">
-            <div class="card shadow-sm mb-4">
-                <div class="card-body d-flex flex-wrap align-items-center">
-                    
-                    <label class="form-label me-2">Bodega:</label>
-                    <select class="form-select me-3" style="width: 200px;" name="bodega">
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; border: 1px solid #e9ecef;">
+            <h3 style="margin-top: 0; font-size: 1rem; color: #555; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Filtrar Reporte</h3>
+            
+            <form method="GET" action="" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div>
+                    <label style="display: block; font-weight: 600; font-size: 0.9rem; color: #444; margin-bottom: 5px;">Bodega:</label>
+                    <select name="bodega" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; min-width: 150px;">
                         {% for bodega in bodegas_opciones %}
                         <option value="{{ bodega }}" {% if bodega == bodega_sel %}selected{% endif %}>
                             {{ bodega }}
                         </option>
                         {% endfor %}
                     </select>
+                </div>
 
-                    <label class="form-label me-2">Mes:</label>
-                    <select class="form-select me-3" style="width: 150px;" name="mes">
+                <div>
+                    <label style="display: block; font-weight: 600; font-size: 0.9rem; color: #444; margin-bottom: 5px;">Mes:</label>
+                    <select name="mes" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
                         {% for valor, texto in meses_opciones %}
                         <option value="{{ valor }}" {% if valor == mes_sel %}selected{% endif %}>
                             {{ texto }}
                         </option>
                         {% endfor %}
                     </select>
+                </div>
 
-                    <label class="form-label me-2">Año:</label>
-                    <select class="form-select" style="width: 100px;" name="año">
+                <div>
+                    <label style="display: block; font-weight: 600; font-size: 0.9rem; color: #444; margin-bottom: 5px;">Año:</label>
+                    <select name="año" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
                         {% for año in años_opciones %}
                         <option value="{{ año }}" {% if año == año_sel %}selected{% endif %}>
                             {{ año }}
                         </option>
                         {% endfor %}
                     </select>
-
-                    <button type="submit" class="btn btn-primary ms-3">Filtrar</button>
                 </div>
-            </div>
-        </form>
 
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Bodega</th>
-                            <th>Lote</th>
-                            <th>Nombre Lote</th>
-                            <th class="text-end">Aportes</th>
-                            <th class="text-end">Desglose Efec.</th>
-                            <th class="text-end">Cheques</th>
-                            <th class="text-end">Diferencia</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for lote in reporte_data %}
-                        <tr>
-                            <td>{{ lote.fecha|date:"d-m-Y" }}</td>
-                            <td>{{ lote.bodega_nombre }}</td>
-                            <td>{{ lote.numero_lote }}</td>
-                            <td>{{ lote.nombre_lote|default:"-" }}</td>
-                            <td class="text-end">${{ lote.total_aportes|floatformat:0 }}</td>
-                            <td class="text-end">${{ lote.total_desglose|floatformat:0 }}</td>
-                            <td class="text-end">${{ lote.total_cheques|floatformat:0 }}</td>
-                            <td class="text-end {% if lote.diferencia != 0 %}text-danger fw-bold{% endif %}">
-                                ${{ lote.diferencia|floatformat:0 }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center">No se encontraron lotes para los filtros seleccionados.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="card-footer fs-5 fw-bold d-flex justify-content-end gap-5">
-                <span>Total Aportes: ${{ total_aportes|floatformat:0 }}</span>
-                <span>Total Desglose: ${{ total_desglose_general|floatformat:0 }}</span>
-                <span class="{% if diferencia_real_total != 0 %}text-danger{% endif %}">
-                    Diferencia Total: ${{ diferencia_real_total|floatformat:0 }}
-                </span>
-            </div>
+                <button type="submit" style="background-color: #28a745; color: white; border: none; padding: 9px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Filtrar
+                </button>
+            </form>
         </div>
 
+        <div style="background-color: #d1ecf1; border-radius: 8px; padding: 20px; border-left: 6px solid #17a2b8;">
+            <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #0c5460;">Resumen Total del Mes</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.95rem;">
+                
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Total Aportes:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ total_aportes }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Total Desglose:</span>
+                        <span class="monto-fmt" style="font-weight: 700;">{{ total_desglose_general }}</span>
+                    </div>
+                </div>
+
+                <div style="border-left: 1px solid #bee5eb; padding-left: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-weight: 600;">Diferencia Total:</span>
+                        <span class="monto-fmt {% if diferencia_real_total == 0 %}text-success{% elif diferencia_real_total > 0 %}text-danger{% else %}text-warning{% endif %}" style="font-weight: 700; font-size: 1.1rem;">
+                            {{ diferencia_real_total }}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 
-</body>
-</html>
+    <div style="background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background-color: #343a40; color: white;">
+                <tr>
+                    <th style="padding: 12px 15px; text-align: left; font-weight: 500;">Fecha</th>
+                    <th style="padding: 12px 15px; text-align: left; font-weight: 500;">Bodega</th>
+                    <th style="padding: 12px 15px; text-align: left; font-weight: 500;">N° Lote</th>
+                    <th style="padding: 12px 15px; text-align: left; font-weight: 500;">Nombre Lote</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 500;">Aportes</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 500;">Desglose Efec.</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 500;">Cheques</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 500;">Diferencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lote in reporte_data %}
+                <tr style="border-bottom: 1px solid #dee2e6;">
+                    <td style="padding: 12px 15px;">{{ lote.fecha|date:"d-m-Y" }}</td>
+                    <td style="padding: 12px 15px;">{{ lote.bodega_nombre }}</td>
+                    <td style="padding: 12px 15px;">
+                        <span style="background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 0.85rem;">
+                            {{ lote.numero_lote }}
+                        </span>
+                    </td>
+                    <td style="padding: 12px 15px; font-style: italic; color: #666;">{{ lote.nombre_lote|default:"-" }}</td>
+                    
+                    <td style="padding: 12px 15px; text-align: right;" class="monto-fmt">{{ lote.total_aportes }}</td>
+                    <td style="padding: 12px 15px; text-align: right;" class="monto-fmt">{{ lote.total_desglose }}</td>
+                    <td style="padding: 12px 15px; text-align: right;" class="monto-fmt">{{ lote.total_cheques }}</td>
+                    
+                    <td style="padding: 12px 15px; text-align: right; font-weight: 700;">
+                        <span class="monto-fmt {% if lote.diferencia != 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ lote.diferencia }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="padding: 30px; text-align: center; color: #888; font-style: italic;">
+                        No se encontraron lotes para los filtros seleccionados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const montos = document.querySelectorAll(".monto-fmt");
+        
+        montos.forEach(function(el) {
+            // Limpiamos cualquier símbolo existente para obtener el número puro
+            let textoLimpio = el.textContent.replace(/[$,.]/g, "").trim(); 
+            // Nota: Si tu backend ya manda formato con puntos, ajusta el replace. 
+            // Asumo que el backend manda float puro o string simple basado en el HTML anterior.
+            
+            // Si el backend manda floats tipo '10000,00' o '10000.0', usamos parseFloat
+            // Para asegurar compatibilidad con lo que recibes de Django (floatformat:0 a veces deja coma):
+            let valorOriginal = parseFloat(el.textContent.replace(',', '.')) || 0;
+
+            let esNegativo = valorOriginal < 0;
+            let valorAbsoluto = Math.abs(valorOriginal);
+            
+            // Formatear miles (Estándar CL)
+            let textoFormateado = "$" + valorAbsoluto.toLocaleString("es-CL");
+            
+            if (esNegativo) {
+                textoFormateado = "-" + textoFormateado;
+                el.style.color = "#dc3545"; // Rojo
+            } else if (el.classList.contains('text-success')) {
+                el.style.color = "#28a745"; // Verde forzado
+            }
+            
+            el.textContent = textoFormateado;
+        });
+    });
+</script>
+
+<style>
+    /* Estilos auxiliares copiados de la referencia para consistencia */
+    .text-success { color: #28a745 !important; }
+    .text-danger { color: #dc3545 !important; }
+    .text-warning { color: #ffc107 !important; text-shadow: 0px 0px 1px #997404; }
+    
+    /* Hover en filas de tabla */
+    tbody tr:hover {
+        background-color: rgba(0,0,0,0.02);
+    }
+</style>
+
+{% endblock %}

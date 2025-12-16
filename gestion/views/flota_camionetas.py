@@ -1,6 +1,54 @@
 from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from gestion.models import Vehiculo
 from datetime import date, timedelta
+from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
+
+def agregar_vehiculo(request):
+    """
+    Función de vista para manejar la adición de un nuevo vehículo.
+    Implementación FINAL de la lógica de guardado.
+    """
+    if request.method == 'POST':
+        try:
+            # 1. Obtener datos del formulario (POST)
+            patente = request.POST.get('patente', '').upper()
+            
+            # 2. Crear y guardar el nuevo objeto Vehiculo
+            Vehiculo.objects.create(
+                patente=patente,
+                fecha_mantencion=request.POST.get('fecha_mantencion'),
+                
+                # El formulario usa 'fecha_circulacion', el modelo usa 'fecha_permiso'
+                fecha_permiso=request.POST.get('fecha_circulacion'), 
+                
+                # El formulario usa 'kilometraje', el modelo usa 'kilometraje_actual'
+                kilometraje_actual=int(request.POST.get('kilometraje') or 0), 
+                kilometraje_maximo=int(request.POST.get('kilometraje_maximo') or 0),
+                
+                # Coincide con el modelo
+                km_diarios=float(request.POST.get('km_diarios') or 0.0),
+                dias_uso_semanal=int(request.POST.get('dias_semana') or 5)
+            )
+            
+            # Si se guarda con éxito, redirige a la lista
+            return redirect('menu_camionetas') 
+
+        except IntegrityError:
+            # messages.error(request, f"La patente {patente} ya existe.")
+            pass
+        except ValueError:
+            # messages.error(request, "Error de formato en números o fechas.")
+            pass
+        except Exception:
+            # messages.error(request, "Ocurrió un error inesperado al guardar.")
+            pass
+            
+        # En caso de error, siempre redirige para evitar el POST/GET loop
+        return redirect('menu_camionetas') 
+    
+    return redirect('menu_camionetas')
 
 def calcular_estado(vehiculo):
     """
@@ -79,3 +127,70 @@ def menu_camionetas(request):
 def inventario_flota(request):
     # Por ahora redirigimos al menú que ya tiene el inventario
     return menu_camionetas(request)
+
+def editar_vehiculo(request, patente):
+    """
+    Gestiona la edición de un vehículo existente.
+    El modal de la plantilla envía todos los datos por POST a esta función.
+    """
+    # 1. Intentar obtener el vehículo o lanzar 404 si no existe
+    vehiculo = get_object_or_404(Vehiculo, patente=patente)
+
+    if request.method == 'POST':
+        try:
+            # 2. Actualizar campos con los nuevos datos del formulario
+            # Los nombres de los campos deben coincidir con los atributos 'name' del modal
+            
+            # Nota: La patente no se cambia aquí, solo se usa como clave para la búsqueda.
+            
+            vehiculo.fecha_mantencion = request.POST.get('fecha_mantencion')
+            vehiculo.fecha_permiso = request.POST.get('fecha_circulacion')
+            
+            # Se usan int() y float() para asegurar el tipo de dato
+            vehiculo.kilometraje_actual = int(request.POST.get('kilometraje') or 0)
+            vehiculo.kilometraje_maximo = int(request.POST.get('kilometraje_maximo') or 0)
+            
+            vehiculo.km_diarios = float(request.POST.get('km_diarios') or 0.0)
+            vehiculo.dias_uso_semanal = int(request.POST.get('dias_semana') or 5)
+            
+            # 3. Guardar los cambios en la base de datos
+            vehiculo.save()
+            
+            # Opcional: messages.success(request, f"Vehículo {patente} actualizado con éxito.")
+
+        except ValueError:
+            # messages.error(request, "Error: Revisa que los campos numéricos sean válidos.")
+            pass
+        except Exception:
+            # messages.error(request, "Ocurrió un error inesperado al actualizar.")
+            pass
+            
+        # Redirigir siempre a la tabla principal después de la operación (POST)
+        return redirect('menu_camionetas')
+        
+    # Si alguien intenta acceder directamente con GET a esta URL, redirigir
+    return redirect('menu_camionetas')
+
+def eliminar_vehiculo(request, patente):
+    """
+    Elimina un vehículo de la base de datos dado su patente (Primary Key).
+    """
+    if request.method == 'POST':
+        try:
+            # get_object_or_404 busca el vehículo y si no lo encuentra, lanza un error 404
+            vehiculo = get_object_or_404(Vehiculo, patente=patente)
+            
+            # Ejecuta la eliminación
+            vehiculo.delete()
+            
+            # Opcional: messages.success(request, f"Vehículo {patente} eliminado con éxito.")
+            
+        except Exception as e:
+            # Opcional: messages.error(request, f"Error al intentar eliminar el vehículo {patente}: {e}")
+            pass
+            
+        # Redirigir siempre a la tabla principal después de la operación
+        return redirect('menu_camionetas')
+        
+    # Si alguien intenta acceder directamente con GET, lo redirigimos
+    return redirect('menu_camionetas')

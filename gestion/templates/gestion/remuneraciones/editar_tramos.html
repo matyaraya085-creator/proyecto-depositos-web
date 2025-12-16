@@ -1,0 +1,73 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 900px;">
+    
+    <div class="card shadow-lg mt-4 border-0">
+        <div class="card-header bg-info text-white py-3">
+            <h5 class="mb-0 fw-bold">👶 Edición de Tramos (Asignación Familiar)</h5>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted">Ajusta los valores mensuales para cada tramo según la ley vigente.</p>
+
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="bg-light">
+                            <tr class="text-uppercase small text-secondary">
+                                <th class="text-center" width="80">Tramo</th>
+                                <th class="text-center">Renta Tope (Hasta)</th>
+                                <th class="text-center">Monto por Carga</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tramo in tramos %}
+                            <tr>
+                                <td class="text-center fw-bold fs-5 bg-light">{{ tramo.tramo }}</td>
+                                <td>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="text" 
+                                               name="tope_{{ tramo.tramo }}" 
+                                               class="form-control text-end fw-bold" 
+                                               value="{{ tramo.ingreso_tope }}"
+                                               {% if tramo.tramo == 'D' %}readonly style="background-color: #e9ecef;"{% endif %}>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="text" 
+                                               name="monto_{{ tramo.tramo }}" 
+                                               class="form-control text-end fw-bold text-success" 
+                                               value="{{ tramo.monto_por_carga }}">
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning small">
+                    <i class="fas fa-info-circle me-1"></i> El <strong>Tramo D</strong> suele ser el tramo superior sin derecho a pago, por lo que su renta tope se mantiene alta y el monto en $0.
+                </div>
+
+                <div class="d-flex justify-content-end mt-4 gap-2">
+                    <a href="{% url 'parametros_remuneraciones' %}" class="btn btn-secondary">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-info text-white fw-bold">
+                        💾 Guardar Todos los Tramos
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

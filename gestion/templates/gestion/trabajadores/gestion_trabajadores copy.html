@@ -1,0 +1,166 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark">🧑‍💼 Gestión de Trabajadores</h2>
+            <p class="text-muted">Administra el personal y sus asignaciones de bodega.</p>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+            
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+                <i class="fas fa-plus-circle"></i> Nuevo Trabajador
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-dark">
+                    <tr>
+                        <th class="ps-4">Nombre Completo</th>
+                        <th>Bodega Asignada</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in trabajadores %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-secondary">{{ t.nombre }}</td>
+                        <td>
+                            {% if t.bodega_asignada == '1221' %}
+                                <span class="badge bg-primary">{{ t.get_bodega_asignada_display }}</span>
+                            {% elif t.bodega_asignada == '1225' %}
+                                <span class="badge bg-success">{{ t.get_bodega_asignada_display }}</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">{{ t.get_bodega_asignada_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalEditar"
+                                    data-id="{{ t.id }}"
+                                    data-nombre="{{ t.nombre }}"
+                                    data-bodega="{{ t.bodega_asignada }}"> <i class="fas fa-edit"></i>
+                            </button>
+                            
+                            <form method="POST" action="{% url 'eliminar_trabajador' t.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('¿Eliminar a {{ t.nombre }}?')">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="fas fa-users-slash fa-2x mb-3"></i><br>
+                            No hay trabajadores registrados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAgregar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">➕ Nuevo Trabajador</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'agregar_trabajador' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre Completo</label>
+                        <input type="text" name="nombre" class="form-control" required placeholder="Ej: Juan Pérez">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Bodega Asignada</label>
+                        <select name="bodega" class="form-select" required>
+                            <option value="" selected disabled>Seleccione...</option>
+                            <option value="1221">Bodega 1221 (Manuel Peñafiel)</option>
+                            <option value="1225">Bodega 1225 (David Perry)</option>
+                            <option value="Ambos">Ambas Bodegas</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">✏️ Editar Trabajador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="formEditar">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre Completo</label>
+                        <input type="text" name="nombre" id="editNombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Bodega Asignada</label>
+                        <select name="bodega" id="editBodega" class="form-select" required>
+                            <option value="1221">Bodega 1221 (Manuel Peñafiel)</option>
+                            <option value="1225">Bodega 1225 (David Perry)</option>
+                            <option value="Ambos">Ambas Bodegas</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modalEditar = document.getElementById('modalEditar');
+        
+        modalEditar.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            
+            var id = button.getAttribute('data-id');
+            var nombre = button.getAttribute('data-nombre');
+            var bodega = button.getAttribute('data-bodega'); // Esto recibirá "1221", "1225" o "Ambos"
+            
+            var inputNombre = document.getElementById('editNombre');
+            var inputBodega = document.getElementById('editBodega');
+            var form = document.getElementById('formEditar');
+
+            inputNombre.value = nombre;
+            inputBodega.value = bodega; // El select seleccionará automáticamente la opción correcta
+
+            form.action = "/trabajadores/" + id + "/editar/"; 
+        });
+    });
+</script>
+{% endblock %}
