@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # --- LIBRERÍAS DE DJANGO ---
-    'django.contrib.humanize',  # <--- AGREGADO: Corrige el error de template
+    'django.contrib.humanize',
     
     # --- TU APLICACIÓN ---
     'gestion',
@@ -63,7 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    # "whitenoise.middleware.WhiteNoiseMiddleware",  <-- COMENTADO PARA QUE NO FALLE LOCALMENTE
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # <--- ACTIVADO (Crucial para CSS en Render)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -123,8 +123,8 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# COMENTADO: Solo descomenta esto cuando lo subas a Render de nuevo
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# ACTIVADO: Permite comprimir y servir archivos en Render
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
