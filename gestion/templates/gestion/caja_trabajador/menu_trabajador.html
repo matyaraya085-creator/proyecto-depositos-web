@@ -7,7 +7,7 @@
         
         <div class="col-md-8">
             <h2 class="dashboard-title" style="margin: 0;">Gestión de Flujo por Trabajador</h2>
-            <p style="color: var(--text-gray); margin: 5px 0 0;">Selecciona un trabajador para iniciar su rendición diaria</p>
+            <p style="color: var(--text-gray); margin: 5px 0 0;">Control individual de cuentas, asignaciones y métricas</p>
         </div>
 
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -30,57 +30,49 @@
         
     </div>
 
-    <div class="row">
+    <div class="dashboard-grid" style="justify-content: center; gap: 20px;">
 
-        {% for bodega in [mp, dp] %}
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0 fw-bold text-secondary">
-                        <i class="fas fa-warehouse me-2"></i> {{ bodega.nombre }}
-                    </h5>
-                </div>
-                <div class="list-group list-group-flush">
-                    {% for t in bodega.trabajadores %}
-                    <a href="{% url 'form_rendicion' t.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">{{ t.nombre }}</span>
-                        <i class="fas fa-arrow-right text-muted"></i>
-                    </a>
-                    {% empty %}
-                    <div class="list-group-item text-muted small">No hay trabajadores asignados a esta bodega.</div>
-                    {% endfor %}
-                </div>
+        <a href="{% url 'dashboard_bodega' %}?bodega=1221" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #0d6efd;">
+                <i class="fas fa-warehouse card-icon" style="color: #FFD43B;"></i>
             </div>
-        </div>
-        {% endfor %}
-        
-        <div class="col-md-12 mb-4">
-            <a href="{% url 'reporte_mensual_trabajador' %}" class="dashboard-card status-info" style="text-align: center;">
-                <div class="card-icon-circle" style="margin-bottom: 5px;">
-                    <i class="fas fa-calendar-alt card-icon"></i>
-                </div>
-                <span class="card-title">Reportes Mensuales (Filtro)</span>
-                <span class="card-desc">Ver rendimiento por mes</span>
-            </a>
-        </div>
+            <span class="card-title">Bodega 1221</span>
+            <span class="card-desc">Manuel Peñafiel</span>
+        </a>
+
+        <a href="{% url 'dashboard_bodega' %}?bodega=1225" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #0d6efd;">
+                <i class="fas fa-warehouse card-icon" style="color: #FFD43B;"></i>
+            </div>
+            <span class="card-title">Bodega 1225</span>
+            <span class="card-desc">David Perry</span>
+        </a>
+
+        <a href="{% url 'reporte_mensual_trabajador' %}" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #6c757d;">
+                <i class="fas fa-calendar-alt card-icon" style="color: white;"></i>
+            </div>
+            <span class="card-title">Reporte Mensual</span>
+            <span class="card-desc">Histórico por Chofer</span>
+        </a>
+
+        <a href="{% url 'estadisticas_globales' %}" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: #6610f2;"> <i class="fas fa-chart-pie card-icon" style="color: white;"></i>
+            </div>
+            <span class="card-title">Análisis Global</span>
+            <span class="card-desc">Estadísticas y KPIs</span>
+        </a>
 
     </div>
-    <style>
+
+<style>
     .btn-workers:hover {
         transform: scale(1.05);
         opacity: 0.95;
     }
-    /* Restaura el estilo base para los nuevos enlaces */
-    .list-group-item-action:hover {
-        background-color: #f8f9fa;
-        transform: none;
-    }
-    .dashboard-card.status-info {
-        border-color: #17a2b8;
-        background-color: #f4f8fa;
-    }
-    .dashboard-card.status-info:hover {
-        box-shadow: 0 10px 25px rgba(23, 162, 184, 0.2) !important;
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
     }
 </style>
 

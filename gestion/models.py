@@ -1,13 +1,15 @@
 from django.db import models
 from datetime import date, datetime
+from django.contrib.auth.models import User
 
-# Opciones para bodegas (Lo que ya tenías)
+# Opciones para bodegas (Usadas en Trabajadores)
 BODEGA_CHOICES = [
     ('1221', '1221 (Manuel Peñafiel)'),
     ('1225', '1225 (David Perry)'),
     ('Ambos', 'Ambos'),
 ]
 
+# Opciones para filtros y depósitos (Usadas en DepositoDiario)
 BODEGA_FILTRO_CHOICES = [
     ('Manuel Peñafiel', '1221 (Manuel Peñafiel)'),
     ('David Perry', '1225 (David Perry)'),
@@ -42,7 +44,7 @@ class SaludConfig(models.Model):
         return f"{self.nombre} ({self.tasa}%)"
 
 class AsignacionFamiliarConfig(models.Model):
-    tramo = models.CharField(max_length=1) # A, B, C, D
+    tramo = models.CharField(max_length=1) 
     ingreso_tope = models.IntegerField()
     monto_por_carga = models.IntegerField()
 
@@ -50,23 +52,19 @@ class AsignacionFamiliarConfig(models.Model):
         return f"Tramo {self.tramo} - ${self.monto_por_carga}"
 
 # ==========================================================
-# 3. TRABAJADOR (Actualizado con datos de remuneración)
+# 3. TRABAJADOR
 # ==========================================================
 class Trabajador(models.Model):
-    # Datos Personales
     nombre = models.CharField(max_length=255, verbose_name="Nombre Completo")
-    rut = models.CharField(max_length=12, unique=True, null=True, verbose_name="RUT") # Nuevo campo
+    rut = models.CharField(max_length=12, unique=True, null=True, verbose_name="RUT")
     
-    # Datos Operativos
     bodega_asignada = models.CharField(max_length=100, choices=BODEGA_CHOICES, default='Ambos')
     cargo = models.CharField(max_length=100, default="Operario", null=True, blank=True)
     fecha_ingreso = models.DateField(null=True, blank=True)
     
-    # Datos Remuneración
     sueldo_base = models.IntegerField(default=460000, verbose_name="Sueldo Base")
     valor_hora_extra = models.IntegerField(default=0, verbose_name="Valor Hora Extra")
     
-    # Relaciones con Configuración (Foreign Keys son mejores que texto plano)
     afp = models.ForeignKey(AfpConfig, on_delete=models.SET_NULL, null=True, blank=True)
     salud = models.ForeignKey(SaludConfig, on_delete=models.SET_NULL, null=True, blank=True)
     
@@ -77,24 +75,20 @@ class Trabajador(models.Model):
         return f"{self.nombre} ({self.rut})"
 
 # ==========================================================
-# 4. REMUNERACIÓN (Historial de Pagos)
+# 4. REMUNERACIÓN
 # ==========================================================
 class Remuneracion(models.Model):
     trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE)
     periodo = models.CharField(max_length=7) # Formato "2023-10"
     fecha_calculo = models.DateTimeField(auto_now_add=True)
     
-    # Resumen de montos
     sueldo_liquido = models.IntegerField()
     total_haberes = models.IntegerField()
     total_descuentos = models.IntegerField()
     
-    # Guardamos todo el detalle (cálculos intermedios) en un JSON para poder 
-    # regenerar la liquidación exacta aunque cambien los parámetros después.
     detalle_json = models.JSONField(verbose_name="Detalle Completo JSON")
 
     class Meta:
-        # Evitar calcular dos veces el mismo sueldo para el mismo mes
         unique_together = ('trabajador', 'periodo')
         ordering = ['-periodo']
 
@@ -102,7 +96,7 @@ class Remuneracion(models.Model):
         return f"{self.trabajador.nombre} - {self.periodo} - ${self.sueldo_liquido}"
 
 # ==========================================================
-# MODELOS ANTERIORES (Caja y Vehículos) - NO TOCAR
+# 5. MODELOS CAJA BANCO (Lotes)
 # ==========================================================
 class DepositoDiario(models.Model):
     fecha = models.DateField()
@@ -114,7 +108,7 @@ class DepositoDiario(models.Model):
     diferencia = models.BigIntegerField(default=0)
     total_cheques = models.BigIntegerField(default=0)
     cerrado = models.BooleanField(default=False, verbose_name="¿Lote Cerrado?")
-    updated_at = models.DateTimeField(auto_now=True) # Campo nuevo útil para saber cuándo se cerró
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('fecha', 'bodega_nombre', 'numero_lote')
@@ -152,7 +146,7 @@ class Vehiculo(models.Model):
 
     def __str__(self):
         return f"{self.patente}"
-
+    
     def get_alertas(self):
         alertas = []
         hoy = date.today()
@@ -172,37 +166,106 @@ class Vehiculo(models.Model):
         elif km_restante <= 1000:
             alertas.append(f"🟡 Kilometraje al límite (quedan {km_restante} km)")
         return alertas
-    
+
 # ==========================================================
-# MODELOS DE FLUJO POR TRABAJADOR (Rendición Diaria)
+# 6. MÓDULO DE FLUJO POR TRABAJADOR (RENDICIÓN)
 # ==========================================================
 class RendicionDiaria(models.Model):
-    """Almacena la rendición diaria de caja de un trabajador específico."""
+    """
+    Almacena la rendición diaria de un trabajador.
+    """
     trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE, verbose_name="Trabajador")
     fecha = models.DateField(default=date.today)
     
-    # Venta de Valores Rendidos
-    # Nota: Usamos BigIntegerField para los montos, como en DepositoDiario
-    credito_empresa = models.BigIntegerField(default=0, verbose_name="Crédito Lipigas")
-    prepago_vales = models.BigIntegerField(default=0, verbose_name="Vales Prepago")
-    transbank = models.BigIntegerField(default=0, verbose_name="Transbank/Tarjeta")
-    efectivo_entregado = models.BigIntegerField(default=0, verbose_name="Efectivo Entregado")
+    # Bodega donde se hizo el turno
+    bodega = models.CharField(max_length=10, default='1221', verbose_name="Bodega del Turno")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-    # Venta de Cilindros (Ejemplo: Campos de la venta por tipo de gas)
-    gas_5kg_cant = models.IntegerField(default=0)
-    gas_11kg_cant = models.IntegerField(default=0)
-    gas_45kg_cant = models.IntegerField(default=0)
+    # Bloqueo de registro (Cierre de caja)
+    cerrado = models.BooleanField(default=False, verbose_name="¿Rendición Cerrada?")
+
+    # --- 1. DETALLE DE CILINDROS (MODIFICADO POR SOLICITUD) ---
+    # Línea Normal
+    gas_5kg = models.IntegerField(default=0, verbose_name="Lipigas 5kg")
+    gas_11kg = models.IntegerField(default=0, verbose_name="Lipigas 11kg")
+    gas_15kg = models.IntegerField(default=0, verbose_name="Lipigas 15kg")
+    gas_45kg = models.IntegerField(default=0, verbose_name="Lipigas 45kg")
+    
+    # Línea Especial (Nuevos)
+    gasc_5kg = models.IntegerField(default=0, verbose_name="Cat 5kg (05 Cat)")
+    gasc_15kg = models.IntegerField(default=0, verbose_name="Cat 15kg (15 Cat)")
+    gas_ultra_15kg = models.IntegerField(default=0, verbose_name="Ultra 15kg")
+
     cilindros_defectuosos = models.IntegerField(default=0)
 
-    # Resultado del Flujo (Cálculo)
-    venta_esperada = models.BigIntegerField(default=0, help_text="Monto total que el trabajador debía rendir (Venta * Precio)")
-    balance_flujo = models.BigIntegerField(default=0, help_text="Diferencia: (Rendido - Esperado)")
+    # DATO CRÍTICO (Suma total)
+    total_kilos = models.FloatField(default=0.0, help_text="Suma de Kilos Vendidos")
+
+    # --- 2. RENDICIÓN DE VALORES (CAJA) ---
+    total_venta = models.BigIntegerField(default=0, verbose_name="Total Venta (Guía)")
+
+    monto_credito = models.BigIntegerField(default=0, verbose_name="Crédito Empresa") # (Ignorado en cálculo, pero guardado)
+    monto_vales = models.BigIntegerField(default=0, verbose_name="Vales/Prepago")
+    monto_transbank = models.BigIntegerField(default=0, verbose_name="Transbank")
+
+    # Efectivo
+    efectivo_entregado = models.BigIntegerField(default=0, verbose_name="Efectivo Real")
     
+    # DATOS CALCULADOS
+    efectivo_esperado = models.BigIntegerField(default=0, help_text="Venta - Descuentos")
+    diferencia = models.BigIntegerField(default=0, help_text="Real - Esperado")
+
     class Meta:
-        # Asegura que solo haya una rendición por trabajador por día
-        unique_together = ('trabajador', 'fecha')
+        ordering = ['-fecha', 'created_at'] 
         verbose_name = "Rendición Diaria"
         verbose_name_plural = "Rendiciones Diarias"
 
     def __str__(self):
-        return f"Rendición de {self.trabajador.nombre} - {self.fecha}"
+        return f"{self.fecha} | {self.trabajador.nombre} | Bodega {self.bodega}"
+    
+# ==========================================================
+# 7. CONFIGURACIÓN DE COMISIONES (NUEVO)
+# ==========================================================
+class TarifaComision(models.Model):
+    """
+    Define cuánto se paga al chofer por cada unidad vendida.
+    Solo debería haber 1 registro activo, o se usa el último modificado.
+    """
+    nombre = models.CharField(max_length=100, default="Tarifa Estándar")
+    
+    # Tarifas Normales
+    tarifa_5kg = models.IntegerField(default=0, verbose_name="Tarifa 5kg")
+    tarifa_11kg = models.IntegerField(default=0, verbose_name="Tarifa 11kg")
+    tarifa_15kg = models.IntegerField(default=0, verbose_name="Tarifa 15kg")
+    tarifa_45kg = models.IntegerField(default=0, verbose_name="Tarifa 45kg")
+    
+    # Tarifas Especiales
+    tarifa_cat_5kg = models.IntegerField(default=0, verbose_name="Tarifa Cat 5kg")
+    tarifa_cat_15kg = models.IntegerField(default=0, verbose_name="Tarifa Cat 15kg")
+    tarifa_ultra_15kg = models.IntegerField(default=0, verbose_name="Tarifa Ultra 15kg")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.nombre} (Actua.: {self.updated_at.strftime('%d/%m/%Y')})"
+
+# ==========================================================
+# 8. CONTROL DE CIERRE DIARIO (NUEVO)
+# ==========================================================
+class CierreDiario(models.Model):
+    """
+    Si existe un registro para fecha/bodega, el día está BLOQUEADO globalmente.
+    """
+    fecha = models.DateField()
+    bodega = models.CharField(max_length=10, choices=BODEGA_CHOICES)
+    cerrado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('fecha', 'bodega') # Solo un cierre por bodega/día
+        verbose_name = "Cierre Diario Global"
+
+    def __str__(self):
+        return f"Cierre {self.bodega} - {self.fecha}"

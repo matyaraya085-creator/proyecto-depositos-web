@@ -3,72 +3,112 @@
 
 {% block content %}
 
-<div class="container-fluid" style="max-width: 1000px;">
+<div class="container-fluid" style="max-width: 1200px;">
     
     <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
         <div>
-            <h2 class="fw-bold mb-0">📝 Rendición Diaria</h2>
-            <p class="text-muted mb-0">Trabajador: <span class="text-primary fw-bold">{{ trabajador_ejemplo }}</span></p>
+            <h2 class="fw-bold mb-0">
+                {% if rendicion.cerrado %}
+                    <i class="fas fa-lock text-danger me-2"></i>Rendición Cerrada
+                {% else %}
+                    <i class="fas fa-pen-to-square text-primary me-2"></i>Editando Rendición
+                {% endif %}
+            </h2>
+            <p class="text-muted mb-0">
+                Trabajador: <span class="text-dark fw-bold">{{ trabajador.nombre }}</span> | 
+                Fecha: <span class="text-dark fw-bold">{{ rendicion.fecha|date:"d/m/Y" }}</span>
+            </p>
         </div>
-        <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill px-4">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
+        
+        <div class="d-flex gap-2">
+            {% if rendicion.cerrado and user.is_superuser %}
+                <form method="POST" onsubmit="return confirm('¿Seguro que deseas REABRIR esta rendición?');">
+                    {% csrf_token %}
+                    <button type="submit" name="accion" value="reabrir" class="btn btn-warning fw-bold">
+                        <i class="fas fa-unlock me-2"></i> REABRIR CAJA
+                    </button>
+                </form>
+            {% endif %}
+
+            <a href="{% url 'dashboard_bodega' %}?bodega={{ bodega_actual }}&fecha={{ fecha_str }}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left me-2"></i> Volver a Bodega
+            </a>
+        </div>
     </div>
 
-    <form method="POST">
+    <form method="POST" id="rendicionForm">
         {% csrf_token %}
-
+        
         <div class="row">
             <div class="col-lg-7 mb-4">
                 <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-gas-pump me-2"></i>Venta de Cilindros</h5>
+                        <small>Cálculo de Kilos</small>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
                                 <tr class="text-secondary small text-uppercase">
                                     <th class="ps-4">Tipo de Gas</th>
-                                    <th class="text-center" width="120">Cant. Vendida</th>
+                                    <th class="text-center" width="130">Cant. Vendida</th>
                                     <th class="text-end pe-4">Total Kg</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for gas in gas_types %}
                                 <tr>
-                                    <td class="ps-4 fw-bold {{ gas.style }}">
-                                        {{ gas.name }}
-                                        {% if gas.weight > 0 %}
-                                            <span class="badge bg-secondary ms-1">{{ gas.weight }}kg</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <input type="number" 
-                                               name="cantidad_{{ gas.name|slugify }}" 
-                                               class="form-control text-center bg-light input-kilos" 
-                                               placeholder="0" 
-                                               value="0"
-                                               min="0"
-                                               data-weight="{{ gas.weight }}">
-                                    </td>
-                                    <td class="text-end pe-4 text-muted fw-bold total-kg-fila">0 kg</td>
+                                    <td class="ps-4 fw-bold">Lipigas 5kg <span class="badge bg-secondary ms-1">5kg</span></td>
+                                    <td><input type="number" name="gas_5kg" value="{{ rendicion.gas_5kg }}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="bg-light">
                                 <tr>
-                                    <td colspan="2" class="text-end fw-bold pt-3">TOTAL KILOS VENDIDOS:</td>
-                                    <td class="text-end pe-4 fw-bold fs-5 pt-3 text-primary" id="total-kilos-vendidos">0 kg</td>
+                                    <td class="ps-4 fw-bold">Lipigas 11kg <span class="badge bg-secondary ms-1">11kg</span></td>
+                                    <td><input type="number" name="gas_11kg" value="{{ rendicion.gas_11kg }}" class="form-control text-center bg-light input-cilindro" data-peso="11" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold">Lipigas 15kg <span class="badge bg-secondary ms-1">15kg</span></td>
+                                    <td><input type="number" name="gas_15kg" value="{{ rendicion.gas_15kg }}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold">Lipigas 45kg <span class="badge bg-secondary ms-1">45kg</span></td>
+                                    <td><input type="number" name="gas_45kg" value="{{ rendicion.gas_45kg }}" class="form-control text-center bg-light input-cilindro" data-peso="45" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">05 Cat <span class="badge bg-primary ms-1">5kg</span></td>
+                                    <td><input type="number" name="gasc_5kg" value="{{ rendicion.gasc_5kg }}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">15 Cat <span class="badge bg-primary ms-1">15kg</span></td>
+                                    <td><input type="number" name="gasc_15kg" value="{{ rendicion.gasc_15kg }}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold text-info">Ultra <span class="badge bg-info text-dark ms-1">15kg</span></td>
+                                    <td><input type="number" name="gas_ultra_15kg" value="{{ rendicion.gas_ultra_15kg }}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="bg-light border-top">
+                                <tr>
+                                    <td colspan="2" class="text-end fw-bold pt-3">TOTAL KILOS COMISIÓN:</td>
+                                    <td class="text-end pe-4 fw-bold fs-4 pt-3 text-primary">
+                                        <span id="displayTotalKilos">0</span> kg
+                                    </td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                     
-                    <div class="p-3 border-top">
-                        <label class="form-label fw-bold text-danger"><i class="fas fa-exclamation-circle me-1"></i> Cilindros Defectuosos</label>
+                    <div class="p-3 border-top bg-light">
+                        <label class="form-label fw-bold text-danger small"><i class="fas fa-exclamation-circle me-1"></i> CILINDROS DEFECTUOSOS (No suman Kg)</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-danger text-white">Cantidad</span>
-                            <input type="number" name="cant_defectuosos" class="form-control" placeholder="0" value="0" min="0">
+                            <span class="input-group-text bg-danger text-white border-danger">Cantidad</span>
+                            <input type="number" name="cilindros_defectuosos" value="{{ rendicion.cilindros_defectuosos }}" class="form-control border-danger" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                         </div>
                     </div>
                 </div>
@@ -81,64 +121,78 @@
                     </div>
                     <div class="card-body">
                         
+                        <div class="mb-3 position-relative">
+                            <label class="form-label fw-bold text-dark">1. Total Venta del Día (Guía)</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white text-success">$</span>
+                                <input type="number" id="inputTotalVenta" name="total_venta" value="{{ rendicion.total_venta }}" class="form-control fw-bold input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                            </div>
+                            <div class="form-text">Monto total que indica la guía o máquina.</div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Descuentos al Efectivo</h6>
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary">🔵 Lipigas (Crédito Empresa)</label>
+                            <label class="form-label fw-bold text-secondary small">Vales/Prepago</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" name="credito_empresa" class="form-control form-control-lg input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
+                                <input type="number" id="inputVales" name="monto_vales" value="{{ rendicion.monto_vales }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary">🎟️ Prepago (Vales)</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small">Transbank (Tarjetas)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" name="prepago_vales" class="form-control form-control-lg input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
+                                <input type="number" id="inputTransbank" name="monto_transbank" value="{{ rendicion.monto_transbank }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary">💳 Transbank (Tarjeta)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="transbank" class="form-control form-control-lg input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
-                            </div>
+                        <div class="alert alert-secondary d-flex justify-content-between align-items-center py-2 mb-4">
+                            <span class="small fw-bold">Debes entregar en Efectivo:</span>
+                            <span class="fw-bold fs-5" id="displayEfectivoEsperado">$0</span>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary">💵 Efectivo Entregado</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-success text-white">$</span>
-                                <input type="number" name="efectivo" class="form-control form-control-lg border-success input-balance" placeholder="0" value="0" min="0" data-value-type="rendido">
+                            <label class="form-label fw-bold text-success">💵 Efectivo Real Entregado</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-success text-white border-success">$</span>
+                                <input type="number" id="inputEfectivoReal" name="efectivo_entregado" value="{{ rendicion.efectivo_entregado }}" class="form-control fw-bold border-success input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                             </div>
-                        </div>
-                        
-                        <hr>
-                        <div class="mb-3" style="border: 1px dashed #ccc; padding: 10px; background: #fff0f0;">
-                            <label class="form-label fw-bold text-danger small">TOTAL VENTA ESPERADA (MOCK)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="venta_esperada_mock" id="venta-esperada-mock" class="form-control form-control-lg text-danger" value="100000" readonly>
-                            </div>
-                            <div class="form-text">Este campo es solo para demo (Venta Esperada Fija).</div>
                         </div>
 
                     </div>
                 </div>
 
-                <div class="card text-center border-0 shadow-sm" style="background-color: #d1e7dd;"> 
+                <div class="card text-center border-0 shadow-sm" id="cardEstadoFlujo" style="background-color: #f8f9fa; transition: all 0.3s;"> 
                     <div class="card-body py-4">
-                        <h6 class="text-uppercase fw-bold text-success mb-2">Estado de Flujo</h6>
-                        <h2 class="display-4 fw-bold text-success mb-0" id="balance-monto">$0</h2>
-                        <span class="badge bg-success rounded-pill px-3 mt-2" id="balance-texto">✨ Flujo Perfecto</span>
+                        <h6 class="text-uppercase fw-bold mb-2" id="tituloEstado">Diferencia</h6>
+                        <h2 class="display-4 fw-bold mb-0" id="displayDiferencia">$0</h2>
+                        
+                        <div id="badgeEstado" class="badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6">
+                            Pendiente
+                        </div>
                     </div>
                 </div>
 
-                <div class="d-grid gap-2 mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow">
-                        <i class="fas fa-save me-2"></i> Guardar Rendición
-                    </button>
-                </div>
+                {% if not rendicion.cerrado %}
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" name="accion" value="guardar" class="btn btn-primary btn-lg rounded-pill shadow">
+                            <i class="fas fa-save me-2"></i> Guardar Cambios
+                        </button>
+                        
+                        <button type="submit" name="accion" value="cerrar" onclick="return confirm('¿Estás seguro de CERRAR esta rendición? No podrás editarla después.');" class="btn btn-danger btn-lg rounded-pill shadow">
+                            <i class="fas fa-lock me-2"></i> Cerrar Caja
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger text-center mt-4">
+                        <i class="fas fa-lock me-2"></i> <strong>Caja Cerrada</strong><br>
+                        No se permiten más cambios.
+                    </div>
+                {% endif %}
 
             </div>
         </div>
@@ -149,75 +203,116 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         
-        const kiloInputs = document.querySelectorAll('.input-kilos');
-        const balanceInputs = document.querySelectorAll('.input-balance');
-        const totalKilosDisplay = document.getElementById('total-kilos-vendidos');
-        const totalKgFilas = document.querySelectorAll('.total-kg-fila');
-        
-        const balanceMontoDisplay = document.getElementById('balance-monto');
-        const balanceTextoDisplay = document.getElementById('balance-texto');
-        const ventaEsperadaInput = document.getElementById('venta-esperada-mock');
+        // ==========================================
+        // 1. LÓGICA DE KILOS (IZQUIERDA)
+        // ==========================================
+        const inputsCilindros = document.querySelectorAll('.input-cilindro');
+        const displayTotalKilos = document.getElementById('displayTotalKilos');
 
-        // Función para formatear dinero (Ej: 100000 -> 100.000)
-        function formatMoney(amount) {
-            return '$' + Math.abs(amount).toLocaleString('es-CL');
-        }
-
-        // --- 1. Cálculo de Kilos Vendidos ---
-        function calcularTotalKilos() {
+        function calcularKilos() {
             let totalKilos = 0;
-            kiloInputs.forEach((input, index) => {
-                const cantidad = parseInt(input.value) || 0;
-                const weight = parseInt(input.getAttribute('data-weight')) || 0;
-                const subtotal = cantidad * weight;
-                
-                totalKgFilas[index].textContent = `${subtotal.toLocaleString('es-CL')} kg`;
+
+            inputsCilindros.forEach(input => {
+                const cantidad = parseFloat(input.value) || 0;
+                const peso = parseFloat(input.dataset.peso) || 0;
+                const subtotal = cantidad * peso;
+
+                // Actualizar el texto pequeño al lado del input
+                const row = input.closest('tr');
+                const subtotalSpan = row.querySelector('.subtotal-kg');
+                if(subtotalSpan) subtotalSpan.textContent = subtotal;
+
                 totalKilos += subtotal;
             });
-            
-            totalKilosDisplay.textContent = `${totalKilos.toLocaleString('es-CL')} kg`;
-            calcularBalance(); // Llamar a calcular el balance después de los kilos
+
+            // Actualizar total visual
+            displayTotalKilos.textContent = totalKilos.toLocaleString('es-CL');
         }
 
-        // --- 2. Cálculo de Balance de Flujo ---
-        function calcularBalance() {
-            let totalRendido = 0;
-            balanceInputs.forEach(input => {
-                totalRendido += parseInt(input.value) || 0;
-            });
+        // ==========================================
+        // 2. LÓGICA DE PLATAS (DERECHA)
+        // ==========================================
+        const inputsPlata = document.querySelectorAll('.input-plata');
+        
+        const inTotalVenta = document.getElementById('inputTotalVenta');
+        const inVales = document.getElementById('inputVales');
+        const inTransbank = document.getElementById('inputTransbank');
+        const inEfectivoReal = document.getElementById('inputEfectivoReal');
 
-            // Usamos la venta esperada del campo de demostración
-            const ventaEsperada = parseInt(ventaEsperadaInput.value) || 0;
-            const balance = totalRendido - ventaEsperada;
+        const dispEsperado = document.getElementById('displayEfectivoEsperado');
+        const dispDiferencia = document.getElementById('displayDiferencia');
+        const cardEstado = document.getElementById('cardEstadoFlujo');
+        const badgeEstado = document.getElementById('badgeEstado');
+        const tituloEstado = document.getElementById('tituloEstado');
+
+        function calcularPlatas() {
+            // Obtener valores (o 0 si está vacío)
+            const totalVenta = parseInt(inTotalVenta.value) || 0;
+            const vales = parseInt(inVales.value) || 0;
+            const transbank = parseInt(inTransbank.value) || 0;
+            const efectivoReal = parseInt(inEfectivoReal.value) || 0;
+
+            // 1. Calcular cuánto efectivo debería tener el trabajador
+            const efectivoEsperado = totalVenta - (vales + transbank);
             
-            const colorMap = {
-                'success': {bg: 'bg-success', text: 'Flujo Perfecto', icon: '✨'},
-                'warning': {bg: 'bg-warning', text: 'SOBRANTE', icon: '⬆️'},
-                'danger': {bg: 'bg-danger', text: 'FALTANTE', icon: '⬇️'}
-            };
+            // Mostrar esperado
+            dispEsperado.textContent = '$ ' + efectivoEsperado.toLocaleString('es-CL');
 
-            // Actualizar display de balance
-            if (balance === 0) {
-                balanceMontoDisplay.textContent = formatMoney(0);
-                balanceTextoDisplay.className = `badge ${colorMap.success.bg} rounded-pill px-3 mt-2 text-white`;
-                balanceTextoDisplay.innerHTML = `${colorMap.success.icon} ${colorMap.success.text}`;
-            } else {
-                const status = balance > 0 ? colorMap.warning : colorMap.danger;
-                balanceMontoDisplay.textContent = formatMoney(balance);
-                balanceMontoDisplay.className = `display-4 fw-bold text-${status.bg.replace('bg-', '')} mb-0`;
-                
-                balanceTextoDisplay.className = `badge ${status.bg} rounded-pill px-3 mt-2 text-white`;
-                balanceTextoDisplay.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${status.text} (${formatMoney(balance)})`;
+            // 2. Calcular diferencia (Real - Esperado)
+            const diferencia = efectivoReal - efectivoEsperado;
+
+            // 3. Actualizar UI (Colores y Textos)
+            dispDiferencia.textContent = '$ ' + Math.abs(diferencia).toLocaleString('es-CL');
+
+            // Reset de clases
+            cardEstado.classList.remove('bg-light', 'bg-danger-subtle', 'bg-success-subtle', 'bg-warning-subtle');
+            badgeEstado.classList.remove('bg-secondary', 'bg-danger', 'bg-success', 'bg-primary');
+            dispDiferencia.classList.remove('text-danger', 'text-success', 'text-primary');
+
+            if (totalVenta === 0 && efectivoReal === 0) {
+                // Estado inicial
+                cardEstado.style.backgroundColor = '#f8f9fa';
+                badgeEstado.textContent = 'Pendiente';
+                badgeEstado.className = 'badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6';
+                tituloEstado.textContent = 'Diferencia';
+                dispDiferencia.textContent = '$0';
+            } 
+            else if (diferencia === 0) {
+                // CUADRADO
+                cardEstado.style.backgroundColor = '#d1e7dd'; // Verde claro bootstrap
+                tituloEstado.textContent = 'Estado de Caja';
+                badgeEstado.textContent = '✨ Cuadrado Perfecto';
+                badgeEstado.className = 'badge bg-success rounded-pill px-4 mt-3 py-2 fs-6';
+                dispDiferencia.classList.add('text-success');
+            } 
+            else if (diferencia < 0) {
+                // FALTANTE
+                cardEstado.style.backgroundColor = '#f8d7da'; // Rojo claro bootstrap
+                tituloEstado.textContent = 'Faltante de Caja';
+                badgeEstado.textContent = '⚠️ Faltante (Descuento)';
+                badgeEstado.className = 'badge bg-danger rounded-pill px-4 mt-3 py-2 fs-6';
+                dispDiferencia.textContent = '- $ ' + Math.abs(diferencia).toLocaleString('es-CL');
+                dispDiferencia.classList.add('text-danger');
+            } 
+            else {
+                // SOBRANTE
+                cardEstado.style.backgroundColor = '#cff4fc'; // Azul claro bootstrap
+                tituloEstado.textContent = 'Sobrante de Caja';
+                badgeEstado.textContent = '💰 Sobrante (A favor)';
+                badgeEstado.className = 'badge bg-primary rounded-pill px-4 mt-3 py-2 fs-6';
+                dispDiferencia.textContent = '+ $ ' + Math.abs(diferencia).toLocaleString('es-CL');
+                dispDiferencia.classList.add('text-primary');
             }
         }
 
-        // Asignar listeners
-        kiloInputs.forEach(input => input.addEventListener('input', calcularTotalKilos));
-        balanceInputs.forEach(input => input.addEventListener('input', calcularBalance));
-        ventaEsperadaInput.addEventListener('input', calcularBalance);
-        
-        // Ejecutar al cargar la página para inicializar los valores
-        calcularTotalKilos();
+        // Listeners
+        inputsCilindros.forEach(input => input.addEventListener('input', calcularKilos));
+        inputsPlata.forEach(input => input.addEventListener('input', calcularPlatas));
+
+        // Ejecutar al inicio para cargar valores guardados (DB)
+        calcularKilos();
+        calcularPlatas();
+
     });
 </script>
 

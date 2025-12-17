@@ -1,5 +1,6 @@
 {% extends 'gestion/core/base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
 
@@ -10,13 +11,12 @@
             <h2 class="fw-bold mb-0">📅 Reporte Mensual</h2>
             <p class="text-muted">
                 {% if trabajador_seleccionado %}
-                    Rendimiento de <span class="fw-bold text-dark">{{ trabajador_seleccionado.nombre }}</span> para el mes {{ fecha_seleccionada }}
+                    Rendimiento de <span class="fw-bold text-dark">{{ trabajador_seleccionado.nombre }}</span>
                 {% else %}
-                    Revisa el rendimiento acumulado por trabajador
+                    Selecciona un trabajador
                 {% endif %}
             </p>
         </div>
-        
         <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill px-4">
             <i class="fas fa-arrow-left"></i> Volver al Menú
         </a>
@@ -26,9 +26,9 @@
         <div class="card-body py-3">
             <form class="row g-3 align-items-center" method="GET">
                 <div class="col-md-5">
-                    <label class="fw-bold small text-muted mb-1">Seleccionar Trabajador:</label>
+                    <label class="fw-bold small text-muted mb-1">Trabajador:</label>
                     <select class="form-select border-primary shadow-sm" name="trabajador_id" required>
-                        <option value="">Selecciona un trabajador...</option>
+                        <option value="">Selecciona...</option>
                         {% for t in trabajadores %}
                         <option value="{{ t.id }}" {% if t.id|stringformat:"i" == request.GET.trabajador_id %}selected{% endif %}>
                             {{ t.nombre }}
@@ -37,7 +37,7 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="fw-bold small text-muted mb-1">Seleccionar Mes:</label>
+                    <label class="fw-bold small text-muted mb-1">Mes:</label>
                     <input type="month" name="fecha_seleccionada" class="form-control border-primary shadow-sm" value="{{ fecha_seleccionada }}">
                 </div>
                 <div class="col-md-3 text-end align-self-end">
@@ -58,45 +58,67 @@
                     
                     {% if not trabajador_seleccionado %}
                         <div class="text-center py-5 text-muted">
-                            <i class="fas fa-users-slash fa-3x mb-3"></i><br>
-                            Selecciona un trabajador para generar el reporte.
+                            <i class="fas fa-users-slash fa-3x mb-3"></i><br>Selecciona un trabajador.
                         </div>
                     {% elif not report_data %}
                          <div class="text-center py-5 text-muted">
-                            <i class="fas fa-calendar-times fa-3x mb-3"></i><br>
-                            No hay rendiciones guardadas para este trabajador en el mes seleccionado.
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i><br>Sin movimientos este mes.
                         </div>
                     {% else %}
                     
                         {% for dia in report_data.detalle_dias %}
-                        <div class="list-group-item list-group-item-action py-3 d-flex justify-content-between align-items-center">
-                            
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-light rounded p-2 text-center" style="min-width: 60px;">
-                                    <span class="d-block fw-bold small text-uppercase text-muted">{{ dia.month }}</span>
-                                    <span class="d-block fw-bold fs-5">{{ dia.day_num }}</span>
+                        <div class="list-group-item py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-light rounded p-2 text-center border" style="min-width: 65px;">
+                                        <span class="d-block fw-bold small text-uppercase text-muted">{{ dia.fecha|date:"M" }}</span>
+                                        <span class="d-block fw-bold fs-5">{{ dia.fecha|date:"d" }}</span>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-capitalize">{{ dia.fecha|date:"l d" }}</h6>
+                                        <span class="badge bg-secondary rounded-pill">Total: {{ dia.total_kg|floatformat:0 }} Kg</span>
+                                        {% if dia.turnos|length > 1 %}
+                                            <span class="badge bg-info text-dark rounded-pill ms-1"><i class="fas fa-layer-group me-1"></i>{{ dia.turnos|length }} Turnos</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold">{{ dia.day_name }} {{ dia.day_num }}</h6>
-                                    <span class="badge bg-secondary rounded-pill">Total Kg: {{ dia.kg|floatformat:0|default:'0'|cut:"-" }}</span>
+                                <div class="text-end">
+                                    {% if dia.total_balance == 0 %}
+                                        <span class="d-block fw-bold text-success fs-5">$0</span>
+                                        <span class="small text-success fw-bold"><i class="fas fa-check-circle"></i> Cuadrado</span>
+                                    {% elif dia.total_balance > 0 %}
+                                        <span class="d-block fw-bold text-primary fs-5">+${{ dia.total_balance|intcomma }}</span>
+                                        <span class="small text-primary fw-bold">Sobrante</span>
+                                    {% else %}
+                                        <span class="d-block fw-bold text-danger fs-5">-${{ dia.total_balance|stringformat:"d"|slice:"1:"|intcomma }}</span>
+                                        <span class="small text-danger fw-bold">Faltante</span>
+                                    {% endif %}
                                 </div>
                             </div>
-                            
-                            <div class="text-end">
-                                {% with abs_balance=dia.balance|floatformat:0|default:"0"|cut:"-" %}
-                                <span class="d-block fw-bold text-{{ dia.status }} fs-5">
-                                    {% if dia.balance < 0 %}-{% elif dia.balance > 0 %}+{% endif %}${{ abs_balance }}
-                                </span>
-                                <span class="small text-{{ dia.status }} fw-bold">
-                                    <i class="fas fa-exclamation-triangle"></i> {{ dia.status_text }}
-                                </span>
-                                {% endwith %}
+                            {% if dia.turnos|length > 1 %}
+                            <div class="mt-2 ms-5 ps-3 border-start border-3 border-light">
+                                <small class="text-muted fw-bold text-uppercase mb-1 d-block">Desglose de turnos:</small>
+                                <table class="table table-sm table-borderless mb-0 small">
+                                    <tbody>
+                                        {% for turno in dia.turnos %}
+                                        <tr>
+                                            <td class="text-muted"><i class="fas fa-warehouse me-1"></i>Bodega {{ turno.bodega }}</td>
+                                            <td class="text-end fw-bold">{{ turno.total_kilos }} Kg</td>
+                                            <td class="text-end">
+                                                {% if turno.diferencia == 0 %} <span class="text-success">OK</span>
+                                                {% elif turno.diferencia > 0 %} <span class="text-primary">+${{ turno.diferencia|intcomma }}</span>
+                                                {% else %} <span class="text-danger">-${{ turno.diferencia|stringformat:"d"|slice:"1:"|intcomma }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
-                    
                     {% endif %}
-
                 </div>
             </div>
         </div>
@@ -104,51 +126,51 @@
         <div class="col-lg-4">
             <div class="card shadow border-0 position-sticky" style="top: 20px;">
                 {% if report_data %}
-                {% with total_kilos=report_data.total_kilos|floatformat:0|default:'0'|cut:"-" %}
-                {% with balance_final=report_data.balance|floatformat:0|default:'0' %}
-                {% with abs_balance_final=balance_final|cut:"-" %}
-                {% with status_color=balance_final|default:0|slice:"1:"|upper %}
-
+                
                 <div class="card-body text-center py-5">
-                    
                     <h6 class="text-uppercase text-muted fw-bold mb-4">Resumen del Mes</h6>
 
                     <div class="mb-4">
                         <span class="d-block text-secondary small fw-bold">TOTAL KILOS VENDIDOS</span>
-                        <h3 class="fw-bold text-dark"><i class="fas fa-weight-hanging text-secondary me-2"></i>{{ total_kilos }} Kg</h3>
+                        <h3 class="fw-bold text-dark"><i class="fas fa-weight-hanging text-secondary me-2"></i>{{ report_data.total_kilos|intcomma }} Kg</h3>
+                    </div>
+
+                    <div class="mb-4 bg-light rounded p-3 border position-relative">
+                        <a href="{% url 'configurar_comisiones' %}" class="btn btn-sm btn-outline-secondary border-0 position-absolute top-0 end-0 m-2" title="Configurar Tarifas">
+                            <i class="fas fa-cog"></i>
+                        </a>
+
+                        <span class="d-block text-success small fw-bold text-uppercase">💰 Comisión Estimada</span>
+                        <h3 class="fw-bold text-success mb-0">${{ report_data.total_comision|intcomma }}</h3>
+                        <small class="text-muted" style="font-size: 0.75rem;">Calculado según tarifas vigentes</small>
                     </div>
 
                     <hr class="my-4">
 
                     <div>
                         <span class="d-block text-secondary small fw-bold mb-2">BALANCE ACUMULADO</span>
-                        
-                        <h1 class="display-4 fw-bold {% if balance_final < 0 %}text-danger{% elif balance_final > 0 %}text-success{% else %}text-dark{% endif %} mb-0">
-                            {% if balance_final < 0 %}-{% endif %}${{ abs_balance_final }}
+                        <h1 class="display-4 fw-bold {% if report_data.balance < 0 %}text-danger{% elif report_data.balance > 0 %}text-primary{% else %}text-success{% endif %} mb-0">
+                            {% if report_data.balance > 0 %}+{% endif %}${{ report_data.balance|intcomma }}
                         </h1>
-                        
-                        <div class="alert alert-{% if balance_final < 0 %}danger{% elif balance_final > 0 %}success{% else %}secondary{% endif %} mt-3 mb-0 rounded-pill py-2">
-                            {% if balance_final < 0 %}
+                        <div class="alert alert-{% if report_data.balance < 0 %}danger{% elif report_data.balance > 0 %}primary{% else %}success{% endif %} mt-3 mb-0 rounded-pill py-2">
+                            {% if report_data.balance < 0 %}
                                 <i class="fas fa-times-circle me-2"></i> <strong>FALTANTE</strong>
-                            {% elif balance_final > 0 %}
+                            {% elif report_data.balance > 0 %}
                                 <i class="fas fa-arrow-up me-2"></i> <strong>SOBRANTE</strong>
                             {% else %}
                                 <i class="fas fa-check-circle me-2"></i> <strong>CUADRADO</strong>
                             {% endif %}
                         </div>
-
                     </div>
-
                 </div>
-
-                {% endwith %}{% endwith %}{% endwith %}{% endwith %}
                 <div class="card-footer bg-light text-center small text-muted">
-                    Datos generados al {{ 'now'|date:"d/m/Y H:i" }}
+                    Datos al {{ 'now'|date:"d/m/Y H:i" }}
                 </div>
+
                 {% else %}
                 <div class="card-body text-center py-5 text-muted">
                     <i class="fas fa-chart-line fa-3x mb-3"></i>
-                    <p>Esperando la selección de un trabajador para generar el resumen.</p>
+                    <p>Selecciona un trabajador para ver sus totales.</p>
                 </div>
                 {% endif %}
             </div>
@@ -156,12 +178,5 @@
 
     </div>
 </div>
-
-<style>
-    /* Estilos adicionales para las clases de estado dinámico */
-    .text-danger { color: #dc3545; }
-    .text-success { color: #28a745; }
-    .text-warning { color: #ffc107; }
-</style>
 
 {% endblock %}

@@ -11,7 +11,7 @@ urlpatterns = [
     path('home/', core.home, name='home'),
     path('accounts/login/', auth_views.LoginView.as_view(template_name='gestion/core/login.html'), name='login'),
     
-    # CAMBIO IMPORTANTE: Usamos tu nueva función personalizada
+    # Logout personalizado
     path('logout/', core.cerrar_sesion, name='logout'),
 
     # ==========================================
@@ -31,16 +31,29 @@ urlpatterns = [
     path('lote/<int:lote_id>/pdf/', banco.generar_pdf_lote, name='generar_pdf_lote'),
 
     # ==========================================
-    # 3. GESTIÓN DE TRABAJADORES
+    # 3. GESTIÓN DE TRABAJADORES (FLUJO DE CAJA)
     # ==========================================
+    # Menú principal
     path('trabajadores/menu/', caja_trabajador.menu_trabajadores, name='menu_trabajadores'),
-    path('trabajadores/rendicion-ejemplo/', caja_trabajador.form_rendicion, name='form_rendicion_ejemplo'),
+    
+    # Dashboard y Acciones
+    path('trabajadores/dashboard/', caja_trabajador.dashboard_bodega, name='dashboard_bodega'),
+    path('trabajadores/rendicion/crear/', caja_trabajador.crear_rendicion_vacia, name='crear_rendicion_vacia'),
+    path('trabajadores/rendicion/<int:rendicion_id>/editar/', caja_trabajador.form_rendicion_editar, name='form_rendicion_editar'),
+    path('trabajadores/rendicion/<int:rendicion_id>/cerrar/', caja_trabajador.cerrar_rendicion, name='cerrar_rendicion'),
+    path('trabajadores/rendicion/<int:rendicion_id>/abrir/', caja_trabajador.abrir_rendicion, name='abrir_rendicion'),
+    path('trabajadores/rendicion/<int:rendicion_id>/eliminar/', caja_trabajador.eliminar_rendicion, name='eliminar_rendicion'),
+
+    # REPORTES Y CONFIGURACIÓN (Aquí faltaba la línea de estadísticas)
     path('trabajadores/reporte-mensual/', caja_trabajador.reporte_mensual, name='reporte_mensual_trabajador'),
+    path('trabajadores/configurar-tarifas/', caja_trabajador.configurar_comisiones, name='configurar_comisiones'),
+    path('trabajadores/estadisticas/', caja_trabajador.estadisticas_globales, name='estadisticas_globales'), 
+    
+    # CRUD de trabajadores
     path('trabajadores/', trabajadores.gestion_trabajadores, name='gestion_trabajadores'),
     path('trabajadores/agregar/', trabajadores.agregar_trabajador, name='agregar_trabajador'),
     path('trabajadores/<int:trabajador_id>/editar/', trabajadores.editar_trabajador, name='editar_trabajador'),
     path('trabajadores/<int:trabajador_id>/eliminar/', trabajadores.eliminar_trabajador, name='eliminar_trabajador'),
-    path('trabajadores/rendicion/<int:trabajador_id>/', caja_trabajador.form_rendicion, name='form_rendicion'),
 
     # ==========================================
     # 4. MÓDULO REMUNERACIONES
