@@ -13,25 +13,27 @@
         </div>
         
         <form method="GET" class="d-flex gap-2 bg-white p-2 rounded shadow-sm">
-            <select name="bodega" class="form-select border-0 bg-light fw-bold" style="width: 150px;">
-                <option value="">🏠 Todas las Bodegas</option>
+            
+            <select name="bodega" class="form-select border-0 bg-light fw-bold" style="width: 150px;" onchange="this.form.submit()">
+                <option value="">🏠 Todas</option>
                 <option value="1221" {% if bodega_seleccionada == '1221' %}selected{% endif %}>Bodega 1221</option>
                 <option value="1225" {% if bodega_seleccionada == '1225' %}selected{% endif %}>Bodega 1225</option>
             </select>
             
-            <select name="mes" class="form-select border-0 bg-light fw-bold" style="width: 120px;">
-                {% for m in meses_disponibles %}
-                <option value="{{ m }}" {% if m == mes_actual %}selected{% endif %}>Mes {{ m }}</option>
+            <select name="mes" class="form-select border-0 bg-light fw-bold" style="width: 140px;" onchange="this.form.submit()">
+                {% for num, nombre in meses_disponibles %}
+                <option value="{{ num }}" {% if num == mes_actual %}selected{% endif %}>
+                    {{ nombre }}
+                </option>
                 {% endfor %}
             </select>
 
-            <select name="anio" class="form-select border-0 bg-light fw-bold" style="width: 100px;">
+            <select name="anio" class="form-select border-0 bg-light fw-bold" style="width: 100px;" onchange="this.form.submit()">
                 {% for a in anios_disponibles %}
                 <option value="{{ a }}" {% if a == anio_actual %}selected{% endif %}>{{ a }}</option>
                 {% endfor %}
             </select>
             
-            <button class="btn btn-primary"><i class="fas fa-filter"></i></button>
         </form>
 
         <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill">
@@ -161,6 +163,7 @@
         const dataBalance = {{ chart_balance|safe }};
         const dataStatus = {{ chart_estados|safe }}; 
 
+        // 1. Gráfico de Kilos
         new Chart(document.getElementById('chartKilos'), {
             type: 'bar',
             data: {
@@ -181,6 +184,7 @@
             }
         });
 
+        // 2. Gráfico de Estado (Dona)
         new Chart(document.getElementById('chartStatus'), {
             type: 'doughnut',
             data: {
@@ -198,6 +202,7 @@
             }
         });
 
+        // 3. Gráfico de Balance (Línea)
         new Chart(document.getElementById('chartBalance'), {
             type: 'line',
             data: {

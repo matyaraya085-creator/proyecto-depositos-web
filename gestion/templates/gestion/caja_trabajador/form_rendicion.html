@@ -142,12 +142,21 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label class="form-label fw-bold text-secondary small">Transbank (Tarjetas)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
                                 <input type="number" id="inputTransbank" name="monto_transbank" value="{{ rendicion.monto_transbank }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                             </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary small">Crédito Empresa</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" id="inputCredito" name="monto_credito" value="{{ rendicion.monto_credito }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                            </div>
+                            <div class="form-text small text-muted">Ventas a crédito que no ingresan efectivo.</div>
                         </div>
 
                         <div class="alert alert-secondary d-flex justify-content-between align-items-center py-2 mb-4">
@@ -217,7 +226,6 @@
                 const peso = parseFloat(input.dataset.peso) || 0;
                 const subtotal = cantidad * peso;
 
-                // Actualizar el texto pequeño al lado del input
                 const row = input.closest('tr');
                 const subtotalSpan = row.querySelector('.subtotal-kg');
                 if(subtotalSpan) subtotalSpan.textContent = subtotal;
@@ -225,18 +233,18 @@
                 totalKilos += subtotal;
             });
 
-            // Actualizar total visual
             displayTotalKilos.textContent = totalKilos.toLocaleString('es-CL');
         }
 
         // ==========================================
-        // 2. LÓGICA DE PLATAS (DERECHA)
+        // 2. LÓGICA DE PLATAS (DERECHA) - ACTUALIZADO
         // ==========================================
         const inputsPlata = document.querySelectorAll('.input-plata');
         
         const inTotalVenta = document.getElementById('inputTotalVenta');
         const inVales = document.getElementById('inputVales');
         const inTransbank = document.getElementById('inputTransbank');
+        const inCredito = document.getElementById('inputCredito'); // <--- NUEVO SELECTOR
         const inEfectivoReal = document.getElementById('inputEfectivoReal');
 
         const dispEsperado = document.getElementById('displayEfectivoEsperado');
@@ -246,31 +254,27 @@
         const tituloEstado = document.getElementById('tituloEstado');
 
         function calcularPlatas() {
-            // Obtener valores (o 0 si está vacío)
             const totalVenta = parseInt(inTotalVenta.value) || 0;
             const vales = parseInt(inVales.value) || 0;
             const transbank = parseInt(inTransbank.value) || 0;
+            const credito = parseInt(inCredito.value) || 0; // <--- VALOR DEL NUEVO INPUT
             const efectivoReal = parseInt(inEfectivoReal.value) || 0;
 
             // 1. Calcular cuánto efectivo debería tener el trabajador
-            const efectivoEsperado = totalVenta - (vales + transbank);
+            // AHORA RESTAMOS TAMBIÉN EL CRÉDITO
+            const efectivoEsperado = totalVenta - (vales + transbank + credito);
             
-            // Mostrar esperado
             dispEsperado.textContent = '$ ' + efectivoEsperado.toLocaleString('es-CL');
 
-            // 2. Calcular diferencia (Real - Esperado)
             const diferencia = efectivoReal - efectivoEsperado;
 
-            // 3. Actualizar UI (Colores y Textos)
             dispDiferencia.textContent = '$ ' + Math.abs(diferencia).toLocaleString('es-CL');
 
-            // Reset de clases
             cardEstado.classList.remove('bg-light', 'bg-danger-subtle', 'bg-success-subtle', 'bg-warning-subtle');
             badgeEstado.classList.remove('bg-secondary', 'bg-danger', 'bg-success', 'bg-primary');
             dispDiferencia.classList.remove('text-danger', 'text-success', 'text-primary');
 
             if (totalVenta === 0 && efectivoReal === 0) {
-                // Estado inicial
                 cardEstado.style.backgroundColor = '#f8f9fa';
                 badgeEstado.textContent = 'Pendiente';
                 badgeEstado.className = 'badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6';
@@ -278,16 +282,14 @@
                 dispDiferencia.textContent = '$0';
             } 
             else if (diferencia === 0) {
-                // CUADRADO
-                cardEstado.style.backgroundColor = '#d1e7dd'; // Verde claro bootstrap
+                cardEstado.style.backgroundColor = '#d1e7dd';
                 tituloEstado.textContent = 'Estado de Caja';
                 badgeEstado.textContent = '✨ Cuadrado Perfecto';
                 badgeEstado.className = 'badge bg-success rounded-pill px-4 mt-3 py-2 fs-6';
                 dispDiferencia.classList.add('text-success');
             } 
             else if (diferencia < 0) {
-                // FALTANTE
-                cardEstado.style.backgroundColor = '#f8d7da'; // Rojo claro bootstrap
+                cardEstado.style.backgroundColor = '#f8d7da'; 
                 tituloEstado.textContent = 'Faltante de Caja';
                 badgeEstado.textContent = '⚠️ Faltante (Descuento)';
                 badgeEstado.className = 'badge bg-danger rounded-pill px-4 mt-3 py-2 fs-6';
@@ -295,8 +297,7 @@
                 dispDiferencia.classList.add('text-danger');
             } 
             else {
-                // SOBRANTE
-                cardEstado.style.backgroundColor = '#cff4fc'; // Azul claro bootstrap
+                cardEstado.style.backgroundColor = '#cff4fc';
                 tituloEstado.textContent = 'Sobrante de Caja';
                 badgeEstado.textContent = '💰 Sobrante (A favor)';
                 badgeEstado.className = 'badge bg-primary rounded-pill px-4 mt-3 py-2 fs-6';
@@ -305,14 +306,11 @@
             }
         }
 
-        // Listeners
         inputsCilindros.forEach(input => input.addEventListener('input', calcularKilos));
         inputsPlata.forEach(input => input.addEventListener('input', calcularPlatas));
 
-        // Ejecutar al inicio para cargar valores guardados (DB)
         calcularKilos();
         calcularPlatas();
-
     });
 </script>
 

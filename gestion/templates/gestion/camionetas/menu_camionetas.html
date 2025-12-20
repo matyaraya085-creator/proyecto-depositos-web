@@ -1,70 +1,179 @@
 {% extends 'gestion/core/base.html' %}
+{% load static %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    /* Estilos específicos usando tus variables CSS */
+    .card-kpi {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+        transition: transform 0.3s;
+    }
+    .card-kpi:hover {
+        transform: translateY(-5px);
+    }
+    .text-lipi-blue { color: var(--lipi-blue); }
+    .bg-lipi-blue { background-color: var(--lipi-blue); }
+    .btn-lipi {
+        background-color: var(--lipi-blue);
+        color: white;
+        border-radius: 50px;
+        padding: 8px 24px;
+        transition: all 0.3s;
+    }
+    .btn-lipi:hover {
+        background-color: var(--lipi-yellow);
+        color: var(--lipi-blue);
+        transform: translateY(-2px);
+    }
+    .table-header-custom {
+        background-color: var(--lipi-blue);
+        color: white;
+    }
+
+    /* Estilos para filas críticas (Nivel Negro) */
+    .table-row-critical {
+        background-color: #343a40 !important; /* Gris oscuro Bootstrap */
+        color: white !important;
+    }
+    .table-row-critical td span, 
+    .table-row-critical td small,
+    .table-row-critical td i {
+        color: white !important;
+    }
+</style>
+
+<div class="container-fluid" style="max-width: 1400px;">
+    
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-5 mt-4">
         <div>
-            <h2 class="fw-bold text-dark">Control de Flota</h2>
-            <p class="text-muted">Monitoreo de vencimientos y kilometraje en tiempo real</p>
+            <h2 class="fw-bold mb-0 text-lipi-blue">🚛 Control de Flota</h2>
+            <p class="text-muted">Gestión de vencimientos, kilometraje y seguridad.</p>
         </div>
         
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex gap-2">
             <a href="{% url 'home' %}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="fas fa-arrow-left"></i> Volver al Inicio
+                <i class="fas fa-arrow-left"></i> Volver
             </a>
-            
-            <button type="button" class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+            <button type="button" class="btn btn-lipi shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAgregar">
                 <i class="fas fa-plus-circle me-2"></i>Nueva Camioneta
             </button>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    <div class="row mb-5">
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-kpi h-100 bg-white">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="rounded-circle p-3 me-3" style="background-color: rgba(29, 29, 80, 0.1); color: var(--lipi-blue);">
+                        <i class="fas fa-truck-pickup fa-2x"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-0">Total Vehículos</h6>
+                        <h2 class="fw-bold mb-0 text-lipi-blue">{{ total_flota }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card card-kpi h-100 bg-white border-danger" style="border-left: 5px solid var(--status-danger);">
+                <div class="card-body d-flex align-items-center p-4">
+                    <div class="rounded-circle p-3 me-3" style="background-color: #ffebee; color: var(--status-danger);">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-0">Alertas Activas</h6>
+                        <h2 class="fw-bold mb-0 text-danger">{{ total_alertas }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
+                    <thead class="table-header-custom text-uppercase small fw-bold">
                         <tr>
-                            <th class="py-3 ps-4">Patente</th>
-                            <th class="py-3">Fecha Mantención</th>
-                            <th class="py-3">Fecha Permiso</th>
-                            <th class="py-3">KM Actual</th>
-                            <th class="py-3">KM Máx.</th>
-                            <th class="py-3 text-center">Estado</th>
+                            <th class="py-3 ps-4">Patente</th> 
+                            <th class="py-3 text-center">Mantención</th>
+                            <th class="py-3 text-center">Permiso</th>
+                            <th class="py-3 text-center">Extintor</th>
+                            <th class="py-3">Kilometraje</th>
+                            <th class="py-3 text-center">Estado General</th>
                             <th class="py-3 text-end pe-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for v in vehiculos %}
-                        <tr class="{% if v.color == 'danger' %}table-danger{% elif v.color == 'warning' %}table-warning{% endif %}">
+                        <tr class="{% if v.color == 'dark' %}table-row-critical{% elif v.color == 'danger' %}bg-danger bg-opacity-10{% elif v.color == 'warning' %}bg-warning bg-opacity-10{% endif %}" 
+                            style="border-bottom: 1px solid #f0f0f0;">
                             
-                            <td class="ps-4 fw-bold">{{ v.patente }}</td>
+                            <td class="ps-4">
+                                <span class="d-block fw-bold fs-5 text-lipi-blue">{{ v.patente }}</span>
+                            </td>
                             
-                            <td>{{ v.fecha_mantencion|date:"d/m/Y"|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if v.fecha_mantencion %}
+                                    <span class="d-block fw-bold">{{ v.fecha_mantencion|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="opacity-50">-</span>
+                                {% endif %}
+                            </td>
                             
-                            <td>{{ v.fecha_permiso|date:"d/m/Y"|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if v.fecha_permiso %}
+                                    <span class="d-block fw-bold">{{ v.fecha_permiso|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="opacity-50">-</span>
+                                {% endif %}
+                            </td>
 
-                            <td><span class="fw-bold">{{ v.km_actual }} km</span></td>
-                            
-                            <td><span class="text-muted">{{ v.km_max }} km</span></td>
+                            <td class="text-center">
+                                {% if v.fecha_extintor %}
+                                    <span class="d-block fw-bold">{{ v.fecha_extintor|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="opacity-50">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-lipi-blue">{{ v.km_actual }} km</span>
+                                    <small class="text-muted">Máx: {{ v.km_max }}</small>
+                                </div>
+                            </td>
                             
                             <td class="text-center">
                                 {% if v.alertas %}
                                     {% for alerta in v.alertas %}
-                                        <span class="badge bg-danger text-white mb-1">{{ alerta }}</span>
+                                        <span class="badge mb-1 d-block w-100 p-2 
+                                            {% if alerta.tipo == 'dark' %}bg-dark text-white border border-white
+                                            {% elif alerta.tipo == 'danger' %}bg-danger text-white
+                                            {% elif alerta.tipo == 'warning' %}bg-warning text-dark
+                                            {% endif %}">
+                                            {{ alerta.msg }}
+                                        </span>
                                     {% endfor %}
                                 {% else %}
-                                    <span class="badge bg-success">🟢 Todo Bien</span>
+                                    <span class="badge bg-success rounded-pill px-3 py-2">
+                                        <i class="fas fa-check-circle me-1"></i> Operativo
+                                    </span>
                                 {% endif %}
                             </td>
 
                             <td class="text-end pe-4">
-                                <button class="btn btn-sm btn-outline-primary me-1 btn-editar"
+                                <button class="btn btn-sm btn-light border shadow-sm text-primary me-1 rounded-circle"
+                                        title="Editar"
+                                        style="width: 32px; height: 32px;"
                                         data-bs-toggle="modal" 
                                         data-bs-target="#modalEditar"
                                         data-patente="{{ v.patente }}"
                                         data-mant="{{ v.fecha_mantencion|date:'Y-m-d' }}"
                                         data-perm="{{ v.fecha_permiso|date:'Y-m-d' }}"
+                                        data-extintor="{{ v.fecha_extintor|date:'Y-m-d' }}" 
                                         data-km="{{ v.km_actual }}"
                                         data-kmmax="{{ v.km_max }}"
                                         data-kmdiarios="{{ v.km_diarios|default:'0' }}"
@@ -74,8 +183,10 @@
                                 
                                 <form method="POST" action="{% url 'eliminar_vehiculo' v.patente %}" style="display: inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('¿Eliminar vehículo {{ v.patente }}?')">
+                                    <button type="submit" class="btn btn-sm btn-light border shadow-sm text-danger rounded-circle"
+                                            title="Eliminar"
+                                            style="width: 32px; height: 32px;"
+                                            onclick="return confirm('¿Estás seguro de eliminar el vehículo {{ v.patente }}?')">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </form>
@@ -83,9 +194,11 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <i class="fas fa-truck-pickup fa-3x mb-3"></i>
-                                <p>No hay vehículos registrados en la flota.</p>
+                            <td colspan="7" class="text-center py-5 text-muted bg-light">
+                                <div class="py-5">
+                                    <i class="fas fa-truck-moving fa-3x mb-3 opacity-25"></i>
+                                    <p class="mb-0">No hay vehículos registrados.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -97,114 +210,138 @@
 </div>
 
 <div class="modal fade" id="modalAgregar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">➕ Nueva Camioneta</h5>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-lipi-blue text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2"></i>Nueva Camioneta</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{% url 'agregar_vehiculo' %}">
                 {% csrf_token %}
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Patente</label>
-                        <input type="text" name="patente" class="form-control" required placeholder="Ej: ABCD12" maxlength="6">
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha Mantención Vence</label>
-                            <input type="date" name="fecha_mantencion" class="form-control" required>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Patente</label>
+                            <input type="text" name="patente" class="form-control form-control-lg fw-bold text-uppercase border-primary" required placeholder="Ej: ABCD12" maxlength="6">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha Permiso Circulación Vence</label>
-                            <input type="date" name="fecha_circulacion" class="form-control" required>
+                        
+                        <div class="col-12"><hr class="text-muted opacity-25"></div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Venc. Mantención</label>
+                            <input type="date" name="fecha_mantencion" class="form-control">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Kilometraje Actual</label>
-                            <input type="number" name="kilometraje" class="form-control" required value="0" min="0">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Venc. Permiso Circulación</label>
+                            <input type="date" name="fecha_circulacion" class="form-control">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Kilometraje Máximo</label>
-                            <input type="number" name="kilometraje_maximo" class="form-control" required value="0" min="0">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-danger">Venc. Extintor</label>
+                            <input type="date" name="fecha_extintor" class="form-control border-danger">
                         </div>
-                    </div>
-                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">KM Diarios (Promedio)</label>
+
+                        <div class="col-12"><hr class="text-muted opacity-25"></div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Kilometraje Actual</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-tachometer-alt"></i></span>
+                                <input type="number" name="kilometraje" class="form-control" required value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Kilometraje Máximo</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-road"></i></span>
+                                <input type="number" name="kilometraje_maximo" class="form-control" required value="0" min="0">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">KM Diarios (Promedio)</label>
                             <input type="number" name="km_diarios" class="form-control" required value="0" min="0" step="0.01">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Días Uso (a la semana)</label>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Días Uso (Semanal)</label>
                             <input type="number" name="dias_semana" class="form-control" required value="5" min="0" max="7">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Vehículo</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-link text-decoration-none text-muted" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-lipi px-4 rounded-pill">Guardar Vehículo</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-
 <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">✏️ Editar Camioneta <span id="editPatenteDisplay" class="fw-bold"></span></h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Editar Camioneta <span id="editPatenteDisplay" class="text-decoration-underline"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" id="formEditar">
                 {% csrf_token %}
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Patente (No editable)</label>
-                        <input type="text" name="patente" id="editPatenteHidden" class="form-control" readonly>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha Mantención Vence</label>
-                            <input type="date" name="fecha_mantencion" id="editFechaMant" class="form-control" required>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <input type="hidden" name="patente" id="editPatenteHidden">
+                            <div class="alert alert-warning small mb-0 border-0 bg-warning bg-opacity-10 text-dark fw-bold">
+                                <i class="fas fa-info-circle me-1"></i> Editando datos del vehículo.
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha Permiso Circulación Vence</label>
-                            <input type="date" name="fecha_circulacion" id="editFechaPerm" class="form-control" required>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Venc. Mantención</label>
+                            <input type="date" name="fecha_mantencion" id="editFechaMant" class="form-control">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Kilometraje Actual</label>
-                            <input type="number" name="kilometraje" id="editKm" class="form-control" required value="0" min="0">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Venc. Permiso Circulación</label>
+                            <input type="date" name="fecha_circulacion" id="editFechaPerm" class="form-control">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Kilometraje Máximo</label>
-                            <input type="number" name="kilometraje_maximo" id="editKmMax" class="form-control" required value="0" min="0">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-danger">Venc. Extintor</label>
+                            <input type="date" name="fecha_extintor" id="editFechaExtintor" class="form-control border-danger">
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">KM Diarios (Promedio)</label>
+
+                        <div class="col-12"><hr class="text-muted opacity-25"></div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Kilometraje Actual</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-tachometer-alt"></i></span>
+                                <input type="number" name="kilometraje" id="editKm" class="form-control" required value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Kilometraje Máximo</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-road"></i></span>
+                                <input type="number" name="kilometraje_maximo" id="editKmMax" class="form-control" required value="0" min="0">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">KM Diarios (Promedio)</label>
                             <input type="number" name="km_diarios" id="editKmDiarios" class="form-control" required value="0" min="0" step="0.01">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Días Uso (a la semana)</label>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Días Uso (Semanal)</label>
                             <input type="number" name="dias_semana" id="editDiasSemana" class="form-control" required value="5" min="0" max="7">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-link text-decoration-none text-muted" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning px-4 rounded-pill">Guardar Cambios</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -213,29 +350,28 @@
         modalEditar.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
             
-            // Extraer info de los atributos data-*
             var patente = button.getAttribute('data-patente');
             var mantencion = button.getAttribute('data-mant');
             var permiso = button.getAttribute('data-perm');
+            var extintor = button.getAttribute('data-extintor');
             var km = button.getAttribute('data-km');
             var kmmax = button.getAttribute('data-kmmax');
             var kmdiarios = button.getAttribute('data-kmdiarios');
             var diassemana = button.getAttribute('data-diassemana');
             
-            // Referencias a los inputs del modal
-            var form = document.getElementById('formEditar');
-
-            // Asignar valores
             document.getElementById('editPatenteDisplay').textContent = patente;
-            document.getElementById('editPatenteHidden').value = patente; // Campo no editable
+            document.getElementById('editPatenteHidden').value = patente;
+            
             document.getElementById('editFechaMant').value = mantencion;
             document.getElementById('editFechaPerm').value = permiso;
+            document.getElementById('editFechaExtintor').value = extintor;
+            
             document.getElementById('editKm').value = km;
             document.getElementById('editKmMax').value = kmmax;
             document.getElementById('editKmDiarios').value = kmdiarios;
             document.getElementById('editDiasSemana').value = diassemana;
 
-            // Define la acción del formulario (se asume que existe una URL 'editar_vehiculo' que acepta la patente)
+            var form = document.getElementById('formEditar');
             form.action = "/flota/" + patente.replace(/[^a-zA-Z0-9]/g, '') + "/editar/"; 
         });
     });

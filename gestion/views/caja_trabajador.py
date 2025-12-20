@@ -6,6 +6,7 @@ from django.db.models import Q, Sum, Count, Case, When, IntegerField, F
 from datetime import date, datetime
 import json
 import locale
+import calendar
 from gestion.models import RendicionDiaria, Trabajador, BODEGA_CHOICES, TarifaComision, CierreDiario
 
 try:
@@ -184,7 +185,7 @@ def form_rendicion_editar(request, rendicion_id):
                 messages.success(request, "🔓 Rendición REABIERTA exitosamente.")
                 return redirect('form_rendicion_editar', rendicion_id=rendicion.id)
 
-            # INVENTARIO
+            # --- 1. INVENTARIO ---
             rendicion.gas_5kg = int(request.POST.get('gas_5kg') or 0)
             rendicion.gas_11kg = int(request.POST.get('gas_11kg') or 0)
             rendicion.gas_15kg = int(request.POST.get('gas_15kg') or 0)
@@ -196,7 +197,7 @@ def form_rendicion_editar(request, rendicion_id):
             
             rendicion.cilindros_defectuosos = int(request.POST.get('cilindros_defectuosos') or 0)
             
-            # CÁLCULO DE KILOS
+            # Cálculo de Kilos
             rendicion.total_kilos = (rendicion.gas_5kg * 5) + \
                                     (rendicion.gas_11kg * 11) + \
                                     (rendicion.gas_15kg * 15) + \
@@ -205,14 +206,24 @@ def form_rendicion_editar(request, rendicion_id):
                                     (rendicion.gasc_15kg * 15) + \
                                     (rendicion.gas_ultra_15kg * 15)
 
-            # CAJA
+            # --- 2. CAJA (ACTUALIZADO CON CRÉDITO) ---
             rendicion.total_venta = int(request.POST.get('total_venta') or 0)
+            
+            # Descuentos
             rendicion.monto_vales = int(request.POST.get('monto_vales') or 0)
             rendicion.monto_transbank = int(request.POST.get('monto_transbank') or 0)
+            rendicion.monto_credito = int(request.POST.get('monto_credito') or 0) # <--- NUEVO CAMPO CAPTURADO
+
+            # Efectivo Real
             rendicion.efectivo_entregado = int(request.POST.get('efectivo_entregado') or 0)
 
-            # CÁLCULO DINERO
-            rendicion.efectivo_esperado = rendicion.total_venta - (rendicion.monto_vales + rendicion.monto_transbank)
+            # CÁLCULO MATEMÁTICO (Venta - Todos los descuentos)
+            rendicion.efectivo_esperado = rendicion.total_venta - (
+                rendicion.monto_vales + 
+                rendicion.monto_transbank + 
+                rendicion.monto_credito # <--- RESTAMOS CRÉDITO
+            )
+            
             rendicion.diferencia = rendicion.efectivo_entregado - rendicion.efectivo_esperado
             
             if accion == 'cerrar':
@@ -232,7 +243,7 @@ def form_rendicion_editar(request, rendicion_id):
         'trabajador': trabajador,
         'bodega_actual': bodega_actual,
         'fecha_str': rendicion.fecha.strftime('%Y-%m-%d'),
-        'dia_cerrado_global': dia_cerrado_global # Para bloquear visualmente el form
+        'dia_cerrado_global': dia_cerrado_global
     }
     return render(request, 'gestion/caja_trabajador/form_rendicion.html', context)
 
@@ -281,10 +292,31 @@ def reporte_mensual(request):
     except ValueError:
         anio, mes = hoy.year, hoy.month
 
-    # OBTENER TARIFAS DE COMISIÓN (Última registrada o ceros)
+    # OBTENER TARIFAS
     tarifas = TarifaComision.objects.last()
     if not tarifas:
-        tarifas = TarifaComision() # Objeto vacío con 0s
+        tarifas = TarifaComision()
+
+    # --- INICIALIZAR ESTRUCTURA PARA TABLA GENERAL ---
+    # Obtenemos el último día del mes (ej: 28, 30, 31)
+    _, num_dias_mes = calendar.monthrange(anio, mes)
+    
+    # Creamos un diccionario base para cada día del mes
+    # Clave: dia (int), Valor: dict con contadores en 0
+    matriz_mensual = {}
+    for d in range(1, num_dias_mes + 1):
+        matriz_mensual[d] = {
+            'c5': 0, 'c11': 0, 'c15': 0, 'c45': 0,
+            'cat5': 0, 'cat15': 0, 'ultra': 0,
+            'defectuosos': 0,
+            'total_kg': 0
+        }
+
+    acumulador_mensual = {
+        'c5': 0, 'c11': 0, 'c15': 0, 'c45': 0,
+        'cat5': 0, 'cat15': 0, 'ultra': 0,
+        'defectuosos': 0
+    }
 
     if trabajador_id:
         trabajador_seleccionado = get_object_or_404(Trabajador, id=trabajador_id)
@@ -295,64 +327,81 @@ def reporte_mensual(request):
             fecha__month=mes
         ).order_by('fecha', 'created_at')
 
-        if rendiciones.exists():
-            dias_agrupados = {}
-            total_kilos_mes = 0
-            balance_mes = 0
+        dias_agrupados = {}
+        total_kilos_mes = 0
+        balance_mes = 0
 
-            # Acumuladores para Comisión
-            sum_5kg = 0
-            sum_11kg = 0
-            sum_15kg = 0
-            sum_45kg = 0
-            sum_cat5 = 0
-            sum_cat15 = 0
-            sum_ultra = 0
+        # PROCESAR DATOS DE LA DB
+        for r in rendiciones:
+            dia_num = r.fecha.day # Obtenemos el día (1, 2, 3...)
+            fecha_key = r.fecha
+            
+            # 1. Lógica para el detalle Día a Día (Existente)
+            if fecha_key not in dias_agrupados:
+                dias_agrupados[fecha_key] = {
+                    'fecha': r.fecha,
+                    'total_kg': 0,
+                    'total_balance': 0,
+                    'turnos': [],
+                    'resumen_dia': {'c5': 0, 'c11': 0, 'c15': 0, 'c45': 0, 'cat5': 0, 'cat15': 0, 'ultra': 0, 'defectuosos': 0}
+                }
+            
+            current_day = dias_agrupados[fecha_key]
+            current_day['total_kg'] += r.total_kilos
+            current_day['total_balance'] += r.diferencia
+            current_day['turnos'].append(r)
+            
+            current_day['resumen_dia']['c5'] += r.gas_5kg
+            current_day['resumen_dia']['c11'] += r.gas_11kg
+            current_day['resumen_dia']['c15'] += r.gas_15kg
+            current_day['resumen_dia']['c45'] += r.gas_45kg
+            current_day['resumen_dia']['cat5'] += r.gasc_5kg
+            current_day['resumen_dia']['cat15'] += r.gasc_15kg
+            current_day['resumen_dia']['ultra'] += r.gas_ultra_15kg
+            current_day['resumen_dia']['defectuosos'] += r.cilindros_defectuosos
 
-            for r in rendiciones:
-                # Agrupación visual por día
-                fecha_key = r.fecha 
-                if fecha_key not in dias_agrupados:
-                    dias_agrupados[fecha_key] = {
-                        'fecha': r.fecha,
-                        'total_kg': 0,
-                        'total_balance': 0,
-                        'turnos': []
-                    }
-                
-                dias_agrupados[fecha_key]['total_kg'] += r.total_kilos
-                dias_agrupados[fecha_key]['total_balance'] += r.diferencia
-                dias_agrupados[fecha_key]['turnos'].append(r)
-                
-                total_kilos_mes += r.total_kilos
-                balance_mes += r.diferencia
+            # 2. Lógica para Totales Generales
+            total_kilos_mes += r.total_kilos
+            balance_mes += r.diferencia
+            
+            acumulador_mensual['c5'] += r.gas_5kg
+            acumulador_mensual['c11'] += r.gas_11kg
+            acumulador_mensual['c15'] += r.gas_15kg
+            acumulador_mensual['c45'] += r.gas_45kg
+            acumulador_mensual['cat5'] += r.gasc_5kg
+            acumulador_mensual['cat15'] += r.gasc_15kg
+            acumulador_mensual['ultra'] += r.gas_ultra_15kg
+            acumulador_mensual['defectuosos'] += r.cilindros_defectuosos
 
-                # Sumar cantidades individuales para comisión
-                sum_5kg += r.gas_5kg
-                sum_11kg += r.gas_11kg
-                sum_15kg += r.gas_15kg
-                sum_45kg += r.gas_45kg
-                sum_cat5 += r.gasc_5kg
-                sum_cat15 += r.gasc_15kg
-                sum_ultra += r.gas_ultra_15kg
+            # 3. LLENADO DE LA MATRIZ (Tabla General)
+            matriz_mensual[dia_num]['c5'] += r.gas_5kg
+            matriz_mensual[dia_num]['c11'] += r.gas_11kg
+            matriz_mensual[dia_num]['c15'] += r.gas_15kg
+            matriz_mensual[dia_num]['c45'] += r.gas_45kg
+            matriz_mensual[dia_num]['cat5'] += r.gasc_5kg
+            matriz_mensual[dia_num]['cat15'] += r.gasc_15kg
+            matriz_mensual[dia_num]['ultra'] += r.gas_ultra_15kg
+            matriz_mensual[dia_num]['total_kg'] += r.total_kilos
 
-            lista_detalle = sorted(dias_agrupados.values(), key=lambda x: x['fecha'])
+        lista_detalle = sorted(dias_agrupados.values(), key=lambda x: x['fecha'])
 
-            # CÁLCULO FINAL DE DINERO COMISIÓN
-            dinero_comision = (sum_5kg * tarifas.tarifa_5kg) + \
-                              (sum_11kg * tarifas.tarifa_11kg) + \
-                              (sum_15kg * tarifas.tarifa_15kg) + \
-                              (sum_45kg * tarifas.tarifa_45kg) + \
-                              (sum_cat5 * tarifas.tarifa_cat_5kg) + \
-                              (sum_cat15 * tarifas.tarifa_cat_15kg) + \
-                              (sum_ultra * tarifas.tarifa_ultra_15kg)
+        # Cálculo de comisión ($)
+        dinero_comision = (acumulador_mensual['c5'] * tarifas.tarifa_5kg) + \
+                          (acumulador_mensual['c11'] * tarifas.tarifa_11kg) + \
+                          (acumulador_mensual['c15'] * tarifas.tarifa_15kg) + \
+                          (acumulador_mensual['c45'] * tarifas.tarifa_45kg) + \
+                          (acumulador_mensual['cat5'] * tarifas.tarifa_cat_5kg) + \
+                          (acumulador_mensual['cat15'] * tarifas.tarifa_cat_15kg) + \
+                          (acumulador_mensual['ultra'] * tarifas.tarifa_ultra_15kg)
 
-            report_data = {
-                'detalle_dias': lista_detalle,
-                'total_kilos': total_kilos_mes,
-                'balance': balance_mes,
-                'total_comision': dinero_comision # Dato nuevo
-            }
+        report_data = {
+            'detalle_dias': lista_detalle,
+            'tabla_general': matriz_mensual, # <--- Enviamos la matriz completa (1-31)
+            'total_kilos': total_kilos_mes,
+            'balance': balance_mes,
+            'total_comision': dinero_comision,
+            'detalle_fisico': acumulador_mensual
+        }
 
     context = {
         'trabajadores': trabajadores,
@@ -365,11 +414,18 @@ def reporte_mensual(request):
 # ==========================================
 # 6. ESTADÍSTICAS GLOBALES (+ RANKING)
 # ==========================================
+# gestion/caja_trabajador.py
+
 @login_required
 def estadisticas_globales(request):
     hoy = timezone.now()
-    anio_actual = int(request.GET.get('anio', hoy.year))
-    mes_actual = int(request.GET.get('mes', hoy.month))
+    try:
+        anio_actual = int(request.GET.get('anio', hoy.year))
+        mes_actual = int(request.GET.get('mes', hoy.month))
+    except ValueError:
+        anio_actual = hoy.year
+        mes_actual = hoy.month
+        
     bodega_seleccionada = request.GET.get('bodega', '')
 
     rendiciones = RendicionDiaria.objects.filter(
@@ -407,20 +463,30 @@ def estadisticas_globales(request):
         sobrante=Count(Case(When(diferencia__gt=0, then=1), output_field=IntegerField()))
     )
 
-    # 3. RANKING DE FALTANTES (NUEVO)
-    # Agrupar por trabajador y sumar diferencias
-    # Ordenar ASCENDENTE (Los números más negativos primero = Más faltante)
+    # 3. RANKING
     ranking = rendiciones.values('trabajador__nombre').annotate(
         total_diferencia=Sum('diferencia'),
         total_kilos_vendidos=Sum('total_kilos')
-    ).order_by('total_diferencia') 
+    ).order_by('total_diferencia')
+
+    # --- LISTAS PARA FILTROS (CAMBIOS AQUÍ) ---
+    
+    # 1. Lista de Tuplas para Meses (Número, Nombre)
+    lista_meses = [
+        (1, 'Enero'), (2, 'Febrero'), (3, 'Marzo'), (4, 'Abril'),
+        (5, 'Mayo'), (6, 'Junio'), (7, 'Julio'), (8, 'Agosto'),
+        (9, 'Septiembre'), (10, 'Octubre'), (11, 'Noviembre'), (12, 'Diciembre')
+    ]
+    
+    # 2. Rango fijo de años 2025-2030 (El segundo num es exclusivo, por eso 2031)
+    lista_anios = range(2025, 2031)
 
     context = {
         'anio_actual': anio_actual,
         'mes_actual': mes_actual,
         'bodega_seleccionada': bodega_seleccionada,
-        'anios_disponibles': range(2024, hoy.year + 2),
-        'meses_disponibles': range(1, 13),
+        'anios_disponibles': lista_anios,     # <--- ACTUALIZADO
+        'meses_disponibles': lista_meses,     # <--- ACTUALIZADO
         'kpi_kilos': kpi_kilos,
         'kpi_dinero': kpi_dinero,
         'kpi_balance': kpi_balance,
@@ -428,13 +494,10 @@ def estadisticas_globales(request):
         'chart_kilos': json.dumps(data_kilos),
         'chart_balance': json.dumps(data_balance),
         'chart_estados': json.dumps([estados['cuadrado'], estados['faltante'], estados['sobrante']]),
-        
-        'ranking': ranking, # Pasamos la lista ordenada
+        'ranking': ranking,
     }
 
     return render(request, 'gestion/caja_trabajador/estadisticas.html', context)
-
-# ... al final del archivo ...
 
 @login_required
 def configurar_comisiones(request):

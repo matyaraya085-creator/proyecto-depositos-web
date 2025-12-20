@@ -139,6 +139,9 @@ class Vehiculo(models.Model):
     patente = models.CharField(max_length=10, unique=True, verbose_name="Patente")
     fecha_mantencion = models.DateField(null=True, blank=True, verbose_name="Venc. Mantención")
     fecha_permiso = models.DateField(null=True, blank=True, verbose_name="Venc. Permiso Circulación")
+    # --- NUEVO CAMPO AGREGADO ---
+    fecha_extintor = models.DateField(null=True, blank=True, verbose_name="Venc. Extintor")
+    
     kilometraje_actual = models.IntegerField(default=0, verbose_name="KM Actual")
     kilometraje_maximo = models.IntegerField(default=0, verbose_name="KM Máximo (Mantención)")
     km_diarios = models.FloatField(default=0.0, verbose_name="Promedio KM Diarios")
@@ -148,23 +151,41 @@ class Vehiculo(models.Model):
         return f"{self.patente}"
     
     def get_alertas(self):
+        """
+        Calcula las alertas del vehículo (Mantención, Permiso, Extintor, KM).
+        Se usa principalmente si accedes al objeto directo en templates.
+        """
         alertas = []
         hoy = date.today()
+        
+        # 1. Mantención
         if self.fecha_mantencion and self.fecha_mantencion <= hoy:
             alertas.append("🔴 MANTENCIÓN VENCIDA")
         elif self.fecha_mantencion and (self.fecha_mantencion - hoy).days <= 30:
             dias = (self.fecha_mantencion - hoy).days
             alertas.append(f"🟡 Mantención vence en {dias} días")
+            
+        # 2. Permiso Circulación
         if self.fecha_permiso and self.fecha_permiso <= hoy:
             alertas.append("🔴 PERMISO VENCIDO")
         elif self.fecha_permiso and (self.fecha_permiso - hoy).days <= 30:
             dias = (self.fecha_permiso - hoy).days
             alertas.append(f"🟡 Permiso vence en {dias} días")
+            
+        # 3. Extintor (NUEVO)
+        if self.fecha_extintor and self.fecha_extintor <= hoy:
+            alertas.append("🔴 EXTINTOR VENCIDO")
+        elif self.fecha_extintor and (self.fecha_extintor - hoy).days <= 30:
+            dias = (self.fecha_extintor - hoy).days
+            alertas.append(f"🟡 Extintor vence en {dias} días")
+            
+        # 4. Kilometraje
         km_restante = self.kilometraje_maximo - self.kilometraje_actual
         if km_restante <= 0:
             alertas.append(f"🔴 KILOMETRAJE EXCEDIDO ({km_restante} km)")
         elif km_restante <= 1000:
             alertas.append(f"🟡 Kilometraje al límite (quedan {km_restante} km)")
+            
         return alertas
 
 # ==========================================================
@@ -186,7 +207,7 @@ class RendicionDiaria(models.Model):
     # Bloqueo de registro (Cierre de caja)
     cerrado = models.BooleanField(default=False, verbose_name="¿Rendición Cerrada?")
 
-    # --- 1. DETALLE DE CILINDROS (MODIFICADO POR SOLICITUD) ---
+    # --- 1. DETALLE DE CILINDROS ---
     # Línea Normal
     gas_5kg = models.IntegerField(default=0, verbose_name="Lipigas 5kg")
     gas_11kg = models.IntegerField(default=0, verbose_name="Lipigas 11kg")
@@ -206,7 +227,7 @@ class RendicionDiaria(models.Model):
     # --- 2. RENDICIÓN DE VALORES (CAJA) ---
     total_venta = models.BigIntegerField(default=0, verbose_name="Total Venta (Guía)")
 
-    monto_credito = models.BigIntegerField(default=0, verbose_name="Crédito Empresa") # (Ignorado en cálculo, pero guardado)
+    monto_credito = models.BigIntegerField(default=0, verbose_name="Crédito Empresa") 
     monto_vales = models.BigIntegerField(default=0, verbose_name="Vales/Prepago")
     monto_transbank = models.BigIntegerField(default=0, verbose_name="Transbank")
 
@@ -226,12 +247,11 @@ class RendicionDiaria(models.Model):
         return f"{self.fecha} | {self.trabajador.nombre} | Bodega {self.bodega}"
     
 # ==========================================================
-# 7. CONFIGURACIÓN DE COMISIONES (NUEVO)
+# 7. CONFIGURACIÓN DE COMISIONES
 # ==========================================================
 class TarifaComision(models.Model):
     """
     Define cuánto se paga al chofer por cada unidad vendida.
-    Solo debería haber 1 registro activo, o se usa el último modificado.
     """
     nombre = models.CharField(max_length=100, default="Tarifa Estándar")
     
@@ -252,7 +272,7 @@ class TarifaComision(models.Model):
         return f"{self.nombre} (Actua.: {self.updated_at.strftime('%d/%m/%Y')})"
 
 # ==========================================================
-# 8. CONTROL DE CIERRE DIARIO (NUEVO)
+# 8. CONTROL DE CIERRE DIARIO
 # ==========================================================
 class CierreDiario(models.Model):
     """
