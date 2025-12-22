@@ -232,9 +232,11 @@
                     </div>
 
                     <div class="mb-4 bg-light rounded p-3 border position-relative text-center">
+                        {% if user.is_superuser %}
                         <a href="{% url 'configurar_comisiones' %}" class="btn btn-sm btn-outline-secondary border-0 position-absolute top-0 end-0 m-2" title="Configurar Tarifas">
                             <i class="fas fa-cog"></i>
                         </a>
+                        {% endif %}
 
                         <span class="d-block text-success small fw-bold text-uppercase">💰 Comisión Estimada</span>
                         <h3 class="fw-bold text-success mb-0">${{ report_data.total_comision|intcomma }}</h3>

@@ -27,20 +27,22 @@
 
         <div class="d-flex align-items-center gap-3">
             
-            {% if user.is_superuser %}
-                <form method="POST" class="d-flex align-items-center">
-                    {% csrf_token %}
-                    {% if esta_cerrado_global %}
+            <form method="POST" class="d-flex align-items-center">
+                {% csrf_token %}
+                
+                {% if esta_cerrado_global %}
+                    {% if user.is_superuser %}
                         <button type="submit" name="accion_global" value="abrir_dia" class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="return confirm('¿Seguro que quieres reabrir la bodega completa?');">
                             <i class="fas fa-unlock me-1"></i> REABRIR DÍA
                         </button>
-                    {% else %}
-                        <button type="submit" name="accion_global" value="cerrar_dia" class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="return confirm('¿Confirmas el CIERRE GLOBAL de hoy? Nadie podrá agregar ni editar turnos.');">
-                            <i class="fas fa-lock me-1"></i> CERRAR DÍA
-                        </button>
                     {% endif %}
-                </form>
-            {% endif %}
+                    
+                {% else %}
+                    <button type="submit" name="accion_global" value="cerrar_dia" class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="return confirm('¿Confirmas el CIERRE GLOBAL de hoy? Nadie podrá agregar ni editar turnos.');">
+                        <i class="fas fa-lock me-1"></i> CERRAR DÍA
+                    </button>
+                {% endif %}
+            </form>
 
             <form method="GET" class="d-flex align-items-center bg-white p-2 rounded shadow-sm border">
                 <input type="hidden" name="bodega" value="{{ bodega_id }}">

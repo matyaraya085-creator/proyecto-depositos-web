@@ -33,7 +33,7 @@
     <div class="dashboard-grid" style="justify-content: center; gap: 20px;">
 
         <a href="{% url 'dashboard_bodega' %}?bodega=1221" class="dashboard-card">
-            <div class="card-icon-circle" style="background-color: #0d6efd;">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
                 <i class="fas fa-warehouse card-icon" style="color: #FFD43B;"></i>
             </div>
             <span class="card-title">Bodega 1221</span>
@@ -41,7 +41,7 @@
         </a>
 
         <a href="{% url 'dashboard_bodega' %}?bodega=1225" class="dashboard-card">
-            <div class="card-icon-circle" style="background-color: #0d6efd;">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
                 <i class="fas fa-warehouse card-icon" style="color: #FFD43B;"></i>
             </div>
             <span class="card-title">Bodega 1225</span>
@@ -49,15 +49,16 @@
         </a>
 
         <a href="{% url 'reporte_mensual_trabajador' %}" class="dashboard-card">
-            <div class="card-icon-circle" style="background-color: #6c757d;">
-                <i class="fas fa-calendar-alt card-icon" style="color: white;"></i>
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
+                <i class="fas fa-calendar-alt card-icon" style="color: #FFD43B;"></i>
             </div>
             <span class="card-title">Reporte Mensual</span>
             <span class="card-desc">Histórico por Chofer</span>
         </a>
 
         <a href="{% url 'estadisticas_globales' %}" class="dashboard-card">
-            <div class="card-icon-circle" style="background-color: #6610f2;"> <i class="fas fa-chart-pie card-icon" style="color: white;"></i>
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);"> 
+                <i class="fas fa-chart-pie card-icon" style="color: #FFD43B;"></i>
             </div>
             <span class="card-title">Análisis Global</span>
             <span class="card-desc">Estadísticas y KPIs</span>

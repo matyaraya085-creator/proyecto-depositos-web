@@ -46,16 +46,20 @@ def dashboard_bodega(request):
 
     # --- LÓGICA DE CIERRE GLOBAL (POST) ---
     if request.method == 'POST' and 'accion_global' in request.POST:
-        if not request.user.is_superuser:
-             messages.error(request, "Solo administradores pueden cerrar/abrir el día globalmente.")
-        else:
-            accion = request.POST.get('accion_global')
-            if accion == 'cerrar_dia':
-                CierreDiario.objects.get_or_create(fecha=fecha_seleccionada, bodega=bodega_id, defaults={'cerrado_por': request.user})
-                messages.success(request, f"🔒 Día {str_fecha_db} CERRADO globalmente para bodega {bodega_id}.")
-            elif accion == 'abrir_dia':
+        accion = request.POST.get('accion_global')
+        
+        # 1. ACCIÓN: CERRAR DÍA (Permitido para todos los usuarios logueados)
+        if accion == 'cerrar_dia':
+            CierreDiario.objects.get_or_create(fecha=fecha_seleccionada, bodega=bodega_id, defaults={'cerrado_por': request.user})
+            messages.success(request, f"🔒 Día {str_fecha_db} CERRADO globalmente para bodega {bodega_id}.")
+        
+        # 2. ACCIÓN: ABRIR DÍA (Restringido solo a ADMIN)
+        elif accion == 'abrir_dia':
+            if request.user.is_superuser:
                 CierreDiario.objects.filter(fecha=fecha_seleccionada, bodega=bodega_id).delete()
                 messages.warning(request, f"🔓 Día {str_fecha_db} REABIERTO globalmente.")
+            else:
+                messages.error(request, "⛔ Solo los administradores pueden REABRIR un día cerrado.")
         
         return redirect(f"{request.path}?bodega={bodega_id}&fecha={str_fecha_db}")
 
@@ -505,6 +509,14 @@ def configurar_comisiones(request):
     Vista para editar las tarifas de pago por cilindro.
     Funciona como un 'Singleton' (siempre edita el último registro activo).
     """
+    
+    # --- SEGURIDAD AGREGADA ---
+    # Solo el Superusuario puede acceder a esta vista y guardar cambios
+    if not request.user.is_superuser:
+        messages.error(request, "⛔ Acceso denegado: Solo administradores pueden configurar tarifas.")
+        return redirect('reporte_mensual_trabajador')
+    # ---------------------------
+
     # 1. Obtener la última tarifa o crear una vacía si es la primera vez
     tarifas = TarifaComision.objects.last()
     if not tarifas:
