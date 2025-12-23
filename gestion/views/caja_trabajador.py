@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Sum, Count, Case, When, IntegerField, F
+from django.urls import reverse  # <--- IMPORTANTE: Necesario para arreglar los links
 from datetime import date, datetime
 import json
 import locale
@@ -44,42 +45,58 @@ def dashboard_bodega(request):
     
     str_fecha_db = fecha_seleccionada.strftime('%Y-%m-%d')
 
+    # Construimos la URL base para redirecciones internas
+    url_dashboard = reverse('dashboard_bodega')
+
     # --- LÓGICA DE CIERRE GLOBAL (POST) ---
     if request.method == 'POST' and 'accion_global' in request.POST:
         accion = request.POST.get('accion_global')
         
-        # 1. ACCIÓN: CERRAR DÍA (Permitido para todos los usuarios logueados)
+        # 1. ACCIÓN: CERRAR DÍA
         if accion == 'cerrar_dia':
-            CierreDiario.objects.get_or_create(fecha=fecha_seleccionada, bodega=bodega_id, defaults={'cerrado_por': request.user})
-            messages.success(request, f"🔒 Día {str_fecha_db} CERRADO globalmente para bodega {bodega_id}.")
+            CierreDiario.objects.get_or_create(
+                fecha=fecha_seleccionada, 
+                bodega=bodega_id, 
+                defaults={'cerrado_por': request.user}
+            )
+            # Cerrar masivamente todas las rendiciones individuales
+            RendicionDiaria.objects.filter(
+                fecha=fecha_seleccionada, 
+                bodega=bodega_id
+            ).update(cerrado=True)
+
+            messages.success(request, f"🔒 Día {str_fecha_db} CERRADO globalmente. Todas las cajas individuales han sido cerradas.")
         
-        # 2. ACCIÓN: ABRIR DÍA (Restringido solo a ADMIN)
+        # 2. ACCIÓN: ABRIR DÍA (Solo ADMIN)
         elif accion == 'abrir_dia':
             if request.user.is_superuser:
                 CierreDiario.objects.filter(fecha=fecha_seleccionada, bodega=bodega_id).delete()
-                messages.warning(request, f"🔓 Día {str_fecha_db} REABIERTO globalmente.")
+                # Reabrir masivamente
+                RendicionDiaria.objects.filter(
+                    fecha=fecha_seleccionada, 
+                    bodega=bodega_id
+                ).update(cerrado=False)
+
+                messages.warning(request, f"🔓 Día {str_fecha_db} REABIERTO globalmente. Las cajas han sido desbloqueadas.")
             else:
                 messages.error(request, "⛔ Solo los administradores pueden REABRIR un día cerrado.")
         
-        return redirect(f"{request.path}?bodega={bodega_id}&fecha={str_fecha_db}")
+        # Redirección segura usando reverse
+        return redirect(f"{url_dashboard}?bodega={bodega_id}&fecha={str_fecha_db}")
 
     # --- CONSULTAS ---
-    # 1. Verificar si está cerrado globalmente
     cierre_obj = CierreDiario.objects.filter(fecha=fecha_seleccionada, bodega=bodega_id).first()
     esta_cerrado_global = (cierre_obj is not None)
 
-    # 2. Rendiciones
     rendiciones = RendicionDiaria.objects.filter(
         fecha=fecha_seleccionada,
         bodega=bodega_id 
     ).select_related('trabajador').order_by('created_at')
 
-    # 3. Trabajadores (solo mostrar si no está cerrado, o para referencia)
     trabajadores_disponibles = Trabajador.objects.filter(
         Q(bodega_asignada=bodega_id) | Q(bodega_asignada='Ambos')
     ).order_by('nombre')
 
-    # Totales del día
     total_kg_dia = sum(r.total_kilos for r in rendiciones)
     total_diferencia_dia = sum(r.diferencia for r in rendiciones) 
 
@@ -107,7 +124,7 @@ def dashboard_bodega(request):
         'trabajadores_disponibles': trabajadores_disponibles,
         'total_kg_dia': total_kg_dia,
         'total_diferencia_dia': total_diferencia_dia,
-        'esta_cerrado_global': esta_cerrado_global, # Variable clave para el Template
+        'esta_cerrado_global': esta_cerrado_global, 
     }
     return render(request, 'gestion/caja_trabajador/lista_rendiciones.html', context)
 
@@ -120,10 +137,12 @@ def crear_rendicion_vacia(request):
         fecha_str = request.POST.get('fecha')
         bodega_id = request.POST.get('bodega_id')
         
-        # Verificar bloqueo global antes de crear
+        url_dashboard = reverse('dashboard_bodega') # URL Segura
+
+        # Verificar bloqueo global
         if CierreDiario.objects.filter(fecha=fecha_str, bodega=bodega_id).exists():
             messages.error(request, "⛔ El día está cerrado globalmente. No se pueden agregar turnos.")
-            return redirect(f"/gestion/trabajadores/dashboard/?bodega={bodega_id}&fecha={fecha_str}")
+            return redirect(f"{url_dashboard}?bodega={bodega_id}&fecha={fecha_str}")
 
         trabajador_id = request.POST.get('trabajador_id')
         trabajador = get_object_or_404(Trabajador, id=trabajador_id)
@@ -132,7 +151,8 @@ def crear_rendicion_vacia(request):
         rendicion = RendicionDiaria.objects.create(
             trabajador=trabajador,
             fecha=fecha,
-            bodega=bodega_id
+            bodega=bodega_id,
+            detalle_gastos='[]' # Inicializamos la lista vacía
         )
         
         return redirect('form_rendicion_editar', rendicion_id=rendicion.id)
@@ -141,23 +161,27 @@ def crear_rendicion_vacia(request):
 
 @login_required
 def eliminar_rendicion(request, rendicion_id):
-    if not request.user.is_superuser:
-        messages.error(request, "No tienes permisos para eliminar.")
-        return redirect('menu_trabajadores')
-        
     rendicion = get_object_or_404(RendicionDiaria, id=rendicion_id)
-    
-    # Verificar bloqueo global
-    if CierreDiario.objects.filter(fecha=rendicion.fecha, bodega=rendicion.bodega).exists():
-        messages.error(request, "⛔ El día está cerrado globalmente. Reábrelo para eliminar.")
-        return redirect(f"/gestion/trabajadores/dashboard/?bodega={rendicion.bodega}&fecha={rendicion.fecha}")
-
     bodega_id = rendicion.bodega
     fecha_str = rendicion.fecha.strftime('%Y-%m-%d')
-    rendicion.delete()
-    messages.success(request, "Rendición eliminada.")
     
-    return redirect(f"/gestion/trabajadores/dashboard/?bodega={bodega_id}&fecha={fecha_str}")
+    # Preparamos la URL de retorno de forma segura
+    url_dashboard = reverse('dashboard_bodega')
+    url_retorno = f"{url_dashboard}?bodega={bodega_id}&fecha={fecha_str}"
+    
+    if CierreDiario.objects.filter(fecha=rendicion.fecha, bodega=rendicion.bodega).exists():
+        messages.error(request, "⛔ El día está cerrado globalmente.")
+        return redirect(url_retorno)
+
+    if not request.user.is_superuser and rendicion.cerrado:
+        messages.error(request, "⛔ No puedes eliminar una rendición que ya fue CERRADA.")
+        return redirect(url_retorno)
+
+    rendicion.delete()
+    messages.success(request, "Rendición eliminada correctamente.")
+    
+    # Aquí es donde fallaba antes: ahora usa la URL generada correctamente
+    return redirect(url_retorno)
 
 # ==========================================
 # 4. FORMULARIO DE EDICIÓN
@@ -168,12 +192,11 @@ def form_rendicion_editar(request, rendicion_id):
     trabajador = rendicion.trabajador
     bodega_actual = rendicion.bodega 
 
-    # Verificar si el día está cerrado globalmente
     dia_cerrado_global = CierreDiario.objects.filter(fecha=rendicion.fecha, bodega=bodega_actual).exists()
 
     if request.method == 'POST':
         if dia_cerrado_global:
-            messages.error(request, "⛔ ACCIÓN DENEGADA: El día tiene un Cierre Global de Bodega.")
+            messages.error(request, "⛔ ACCIÓN DENEGADA: El día tiene un Cierre Global.")
             return redirect('form_rendicion_editar', rendicion_id=rendicion.id)
 
         accion = request.POST.get('accion') 
@@ -210,22 +233,34 @@ def form_rendicion_editar(request, rendicion_id):
                                     (rendicion.gasc_15kg * 15) + \
                                     (rendicion.gas_ultra_15kg * 15)
 
-            # --- 2. CAJA (ACTUALIZADO CON CRÉDITO) ---
+            # --- 2. CAJA Y GASTOS ---
             rendicion.total_venta = int(request.POST.get('total_venta') or 0)
             
-            # Descuentos
             rendicion.monto_vales = int(request.POST.get('monto_vales') or 0)
             rendicion.monto_transbank = int(request.POST.get('monto_transbank') or 0)
-            rendicion.monto_credito = int(request.POST.get('monto_credito') or 0) # <--- NUEVO CAMPO CAPTURADO
+            rendicion.monto_credito = int(request.POST.get('monto_credito') or 0) 
+            
+            # --- PROCESAMIENTO DE GASTOS (JSON) ---
+            json_gastos = request.POST.get('detalle_gastos') or '[]'
+            rendicion.detalle_gastos = json_gastos 
+            
+            try:
+                lista_gastos = json.loads(json_gastos)
+                total_gastos_calculado = sum(int(item.get('monto', 0)) for item in lista_gastos)
+            except:
+                total_gastos_calculado = 0
+            
+            rendicion.gasto_total = total_gastos_calculado
 
             # Efectivo Real
             rendicion.efectivo_entregado = int(request.POST.get('efectivo_entregado') or 0)
 
-            # CÁLCULO MATEMÁTICO (Venta - Todos los descuentos)
+            # CÁLCULO MATEMÁTICO
             rendicion.efectivo_esperado = rendicion.total_venta - (
                 rendicion.monto_vales + 
                 rendicion.monto_transbank + 
-                rendicion.monto_credito # <--- RESTAMOS CRÉDITO
+                rendicion.monto_credito +
+                rendicion.gasto_total 
             )
             
             rendicion.diferencia = rendicion.efectivo_entregado - rendicion.efectivo_esperado
@@ -253,30 +288,40 @@ def form_rendicion_editar(request, rendicion_id):
 
 @login_required
 def cerrar_rendicion(request, rendicion_id):
-    # (Mantenemos esta vista por si se llama desde url, pero agregamos validación)
     rendicion = get_object_or_404(RendicionDiaria, id=rendicion_id)
+    bodega = rendicion.bodega
+    fecha_str = rendicion.fecha.strftime('%Y-%m-%d')
+    
+    url_dashboard = reverse('dashboard_bodega')
+    url_retorno = f"{url_dashboard}?bodega={bodega}&fecha={fecha_str}"
+
     if CierreDiario.objects.filter(fecha=rendicion.fecha, bodega=rendicion.bodega).exists():
         messages.error(request, "⛔ Día Cerrado Globalmente.")
     else:
         rendicion.cerrado = True
         rendicion.save()
-    bodega = rendicion.bodega
-    return redirect(f"/gestion/trabajadores/dashboard/?bodega={bodega}&fecha={rendicion.fecha}")
+        
+    return redirect(url_retorno)
 
 @login_required
 def abrir_rendicion(request, rendicion_id):
+    rendicion = get_object_or_404(RendicionDiaria, id=rendicion_id)
+    bodega = rendicion.bodega
+    fecha_str = rendicion.fecha.strftime('%Y-%m-%d')
+    
+    url_dashboard = reverse('dashboard_bodega')
+    url_retorno = f"{url_dashboard}?bodega={bodega}&fecha={fecha_str}"
+
     if not request.user.is_superuser:
         messages.error(request, "Solo administradores.")
     else:
-        rendicion = get_object_or_404(RendicionDiaria, id=rendicion_id)
-        # Aquí permitimos abrir incluso si hay cierre global, pero el form no dejará guardar
         rendicion.cerrado = False
         rendicion.save()
-    bodega = rendicion.bodega
-    return redirect(f"/gestion/trabajadores/dashboard/?bodega={bodega}&fecha={rendicion.fecha}")
+        
+    return redirect(url_retorno)
 
 # ==========================================
-# 5. REPORTE MENSUAL (CON VALORIZACIÓN)
+# 5. REPORTE MENSUAL
 # ==========================================
 @login_required
 def reporte_mensual(request):
@@ -302,11 +347,8 @@ def reporte_mensual(request):
         tarifas = TarifaComision()
 
     # --- INICIALIZAR ESTRUCTURA PARA TABLA GENERAL ---
-    # Obtenemos el último día del mes (ej: 28, 30, 31)
     _, num_dias_mes = calendar.monthrange(anio, mes)
     
-    # Creamos un diccionario base para cada día del mes
-    # Clave: dia (int), Valor: dict con contadores en 0
     matriz_mensual = {}
     for d in range(1, num_dias_mes + 1):
         matriz_mensual[d] = {
@@ -335,12 +377,10 @@ def reporte_mensual(request):
         total_kilos_mes = 0
         balance_mes = 0
 
-        # PROCESAR DATOS DE LA DB
         for r in rendiciones:
-            dia_num = r.fecha.day # Obtenemos el día (1, 2, 3...)
+            dia_num = r.fecha.day 
             fecha_key = r.fecha
             
-            # 1. Lógica para el detalle Día a Día (Existente)
             if fecha_key not in dias_agrupados:
                 dias_agrupados[fecha_key] = {
                     'fecha': r.fecha,
@@ -364,7 +404,6 @@ def reporte_mensual(request):
             current_day['resumen_dia']['ultra'] += r.gas_ultra_15kg
             current_day['resumen_dia']['defectuosos'] += r.cilindros_defectuosos
 
-            # 2. Lógica para Totales Generales
             total_kilos_mes += r.total_kilos
             balance_mes += r.diferencia
             
@@ -377,7 +416,6 @@ def reporte_mensual(request):
             acumulador_mensual['ultra'] += r.gas_ultra_15kg
             acumulador_mensual['defectuosos'] += r.cilindros_defectuosos
 
-            # 3. LLENADO DE LA MATRIZ (Tabla General)
             matriz_mensual[dia_num]['c5'] += r.gas_5kg
             matriz_mensual[dia_num]['c11'] += r.gas_11kg
             matriz_mensual[dia_num]['c15'] += r.gas_15kg
@@ -389,7 +427,6 @@ def reporte_mensual(request):
 
         lista_detalle = sorted(dias_agrupados.values(), key=lambda x: x['fecha'])
 
-        # Cálculo de comisión ($)
         dinero_comision = (acumulador_mensual['c5'] * tarifas.tarifa_5kg) + \
                           (acumulador_mensual['c11'] * tarifas.tarifa_11kg) + \
                           (acumulador_mensual['c15'] * tarifas.tarifa_15kg) + \
@@ -400,7 +437,7 @@ def reporte_mensual(request):
 
         report_data = {
             'detalle_dias': lista_detalle,
-            'tabla_general': matriz_mensual, # <--- Enviamos la matriz completa (1-31)
+            'tabla_general': matriz_mensual, 
             'total_kilos': total_kilos_mes,
             'balance': balance_mes,
             'total_comision': dinero_comision,
@@ -416,10 +453,8 @@ def reporte_mensual(request):
     return render(request, 'gestion/caja_trabajador/reporte_mensual.html', context)
 
 # ==========================================
-# 6. ESTADÍSTICAS GLOBALES (+ RANKING)
+# 6. ESTADÍSTICAS GLOBALES
 # ==========================================
-# gestion/caja_trabajador.py
-
 @login_required
 def estadisticas_globales(request):
     hoy = timezone.now()
@@ -440,7 +475,7 @@ def estadisticas_globales(request):
     if bodega_seleccionada in ['1221', '1225']:
         rendiciones = rendiciones.filter(bodega=bodega_seleccionada)
 
-    # 1. KPIs Generales
+    # KPIs Generales
     resumen = rendiciones.aggregate(
         total_kilos=Sum('total_kilos'),
         total_dinero=Sum('total_venta'),
@@ -451,7 +486,7 @@ def estadisticas_globales(request):
     kpi_dinero = resumen['total_dinero'] or 0
     kpi_balance = resumen['balance_neto'] or 0
 
-    # 2. Datos Gráficos
+    # Datos Gráficos
     datos_diarios = rendiciones.values('fecha').annotate(
         suma_kilos=Sum('total_kilos'),
         suma_balance=Sum('diferencia')
@@ -467,30 +502,26 @@ def estadisticas_globales(request):
         sobrante=Count(Case(When(diferencia__gt=0, then=1), output_field=IntegerField()))
     )
 
-    # 3. RANKING
+    # RANKING
     ranking = rendiciones.values('trabajador__nombre').annotate(
         total_diferencia=Sum('diferencia'),
         total_kilos_vendidos=Sum('total_kilos')
     ).order_by('total_diferencia')
 
-    # --- LISTAS PARA FILTROS (CAMBIOS AQUÍ) ---
-    
-    # 1. Lista de Tuplas para Meses (Número, Nombre)
     lista_meses = [
         (1, 'Enero'), (2, 'Febrero'), (3, 'Marzo'), (4, 'Abril'),
         (5, 'Mayo'), (6, 'Junio'), (7, 'Julio'), (8, 'Agosto'),
         (9, 'Septiembre'), (10, 'Octubre'), (11, 'Noviembre'), (12, 'Diciembre')
     ]
     
-    # 2. Rango fijo de años 2025-2030 (El segundo num es exclusivo, por eso 2031)
     lista_anios = range(2025, 2031)
 
     context = {
         'anio_actual': anio_actual,
         'mes_actual': mes_actual,
         'bodega_seleccionada': bodega_seleccionada,
-        'anios_disponibles': lista_anios,     # <--- ACTUALIZADO
-        'meses_disponibles': lista_meses,     # <--- ACTUALIZADO
+        'anios_disponibles': lista_anios,
+        'meses_disponibles': lista_meses,
         'kpi_kilos': kpi_kilos,
         'kpi_dinero': kpi_dinero,
         'kpi_balance': kpi_balance,
@@ -505,24 +536,14 @@ def estadisticas_globales(request):
 
 @login_required
 def configurar_comisiones(request):
-    """
-    Vista para editar las tarifas de pago por cilindro.
-    Funciona como un 'Singleton' (siempre edita el último registro activo).
-    """
-    
-    # --- SEGURIDAD AGREGADA ---
-    # Solo el Superusuario puede acceder a esta vista y guardar cambios
     if not request.user.is_superuser:
         messages.error(request, "⛔ Acceso denegado: Solo administradores pueden configurar tarifas.")
         return redirect('reporte_mensual_trabajador')
-    # ---------------------------
 
-    # 1. Obtener la última tarifa o crear una vacía si es la primera vez
     tarifas = TarifaComision.objects.last()
     if not tarifas:
         tarifas = TarifaComision.objects.create(nombre="Tarifa Inicial 2025")
 
-    # 2. Guardar cambios
     if request.method == 'POST':
         try:
             tarifas.tarifa_5kg = int(request.POST.get('tarifa_5kg') or 0)
@@ -536,8 +557,6 @@ def configurar_comisiones(request):
             
             tarifas.save()
             messages.success(request, "✅ Tarifas de comisión actualizadas correctamente.")
-            
-            # Redirigir de vuelta al reporte mensual
             return redirect('reporte_mensual_trabajador')
             
         except Exception as e:

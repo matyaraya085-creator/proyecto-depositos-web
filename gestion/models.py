@@ -16,7 +16,7 @@ BODEGA_FILTRO_CHOICES = [
 ]
 
 # ==========================================================
-# 1. CONFIGURACIÓN GLOBAL (UF, UTM, Sueldo Mínimo)
+# 1. CONFIGURACIÓN GLOBAL
 # ==========================================================
 class ConfiguracionGlobal(models.Model):
     clave = models.CharField(max_length=50, unique=True)
@@ -27,7 +27,7 @@ class ConfiguracionGlobal(models.Model):
         return f"{self.descripcion}: {self.valor}"
 
 # ==========================================================
-# 2. TABLAS PREVISIONALES (AFP, Salud, Tramos)
+# 2. TABLAS PREVISIONALES
 # ==========================================================
 class AfpConfig(models.Model):
     nombre = models.CharField(max_length=50)
@@ -79,7 +79,7 @@ class Trabajador(models.Model):
 # ==========================================================
 class Remuneracion(models.Model):
     trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE)
-    periodo = models.CharField(max_length=7) # Formato "2023-10"
+    periodo = models.CharField(max_length=7) 
     fecha_calculo = models.DateTimeField(auto_now_add=True)
     
     sueldo_liquido = models.IntegerField()
@@ -139,7 +139,6 @@ class Vehiculo(models.Model):
     patente = models.CharField(max_length=10, unique=True, verbose_name="Patente")
     fecha_mantencion = models.DateField(null=True, blank=True, verbose_name="Venc. Mantención")
     fecha_permiso = models.DateField(null=True, blank=True, verbose_name="Venc. Permiso Circulación")
-    # --- NUEVO CAMPO AGREGADO ---
     fecha_extintor = models.DateField(null=True, blank=True, verbose_name="Venc. Extintor")
     
     kilometraje_actual = models.IntegerField(default=0, verbose_name="KM Actual")
@@ -151,10 +150,6 @@ class Vehiculo(models.Model):
         return f"{self.patente}"
     
     def get_alertas(self):
-        """
-        Calcula las alertas del vehículo (Mantención, Permiso, Extintor, KM).
-        Se usa principalmente si accedes al objeto directo en templates.
-        """
         alertas = []
         hoy = date.today()
         
@@ -172,7 +167,7 @@ class Vehiculo(models.Model):
             dias = (self.fecha_permiso - hoy).days
             alertas.append(f"🟡 Permiso vence en {dias} días")
             
-        # 3. Extintor (NUEVO)
+        # 3. Extintor
         if self.fecha_extintor and self.fecha_extintor <= hoy:
             alertas.append("🔴 EXTINTOR VENCIDO")
         elif self.fecha_extintor and (self.fecha_extintor - hoy).days <= 30:
@@ -204,24 +199,20 @@ class RendicionDiaria(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Bloqueo de registro (Cierre de caja)
+    # Bloqueo de registro
     cerrado = models.BooleanField(default=False, verbose_name="¿Rendición Cerrada?")
 
     # --- 1. DETALLE DE CILINDROS ---
-    # Línea Normal
     gas_5kg = models.IntegerField(default=0, verbose_name="Lipigas 5kg")
     gas_11kg = models.IntegerField(default=0, verbose_name="Lipigas 11kg")
     gas_15kg = models.IntegerField(default=0, verbose_name="Lipigas 15kg")
     gas_45kg = models.IntegerField(default=0, verbose_name="Lipigas 45kg")
     
-    # Línea Especial (Nuevos)
     gasc_5kg = models.IntegerField(default=0, verbose_name="Cat 5kg (05 Cat)")
     gasc_15kg = models.IntegerField(default=0, verbose_name="Cat 15kg (15 Cat)")
     gas_ultra_15kg = models.IntegerField(default=0, verbose_name="Ultra 15kg")
 
     cilindros_defectuosos = models.IntegerField(default=0)
-
-    # DATO CRÍTICO (Suma total)
     total_kilos = models.FloatField(default=0.0, help_text="Suma de Kilos Vendidos")
 
     # --- 2. RENDICIÓN DE VALORES (CAJA) ---
@@ -230,6 +221,12 @@ class RendicionDiaria(models.Model):
     monto_credito = models.BigIntegerField(default=0, verbose_name="Crédito Empresa") 
     monto_vales = models.BigIntegerField(default=0, verbose_name="Vales/Prepago")
     monto_transbank = models.BigIntegerField(default=0, verbose_name="Transbank")
+    
+    # --- GASTOS (MODIFICADO) ---
+    # Guardaremos la suma total en "gasto_total" para cálculos rápidos
+    gasto_total = models.IntegerField(default=0, verbose_name="Total Gastos")
+    # Guardaremos el detalle (Ej: '[{"monto":1000,"desc":"Agua"}, ...]') en este campo de texto
+    detalle_gastos = models.TextField(default='[]', verbose_name="JSON Detalle Gastos")
 
     # Efectivo
     efectivo_entregado = models.BigIntegerField(default=0, verbose_name="Efectivo Real")
@@ -250,18 +247,13 @@ class RendicionDiaria(models.Model):
 # 7. CONFIGURACIÓN DE COMISIONES
 # ==========================================================
 class TarifaComision(models.Model):
-    """
-    Define cuánto se paga al chofer por cada unidad vendida.
-    """
     nombre = models.CharField(max_length=100, default="Tarifa Estándar")
     
-    # Tarifas Normales
     tarifa_5kg = models.IntegerField(default=0, verbose_name="Tarifa 5kg")
     tarifa_11kg = models.IntegerField(default=0, verbose_name="Tarifa 11kg")
     tarifa_15kg = models.IntegerField(default=0, verbose_name="Tarifa 15kg")
     tarifa_45kg = models.IntegerField(default=0, verbose_name="Tarifa 45kg")
     
-    # Tarifas Especiales
     tarifa_cat_5kg = models.IntegerField(default=0, verbose_name="Tarifa Cat 5kg")
     tarifa_cat_15kg = models.IntegerField(default=0, verbose_name="Tarifa Cat 15kg")
     tarifa_ultra_15kg = models.IntegerField(default=0, verbose_name="Tarifa Ultra 15kg")
@@ -275,16 +267,13 @@ class TarifaComision(models.Model):
 # 8. CONTROL DE CIERRE DIARIO
 # ==========================================================
 class CierreDiario(models.Model):
-    """
-    Si existe un registro para fecha/bodega, el día está BLOQUEADO globalmente.
-    """
     fecha = models.DateField()
     bodega = models.CharField(max_length=10, choices=BODEGA_CHOICES)
     cerrado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('fecha', 'bodega') # Solo un cierre por bodega/día
+        unique_together = ('fecha', 'bodega')
         verbose_name = "Cierre Diario Global"
 
     def __str__(self):

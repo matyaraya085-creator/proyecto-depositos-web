@@ -39,6 +39,8 @@
     <form method="POST" id="rendicionForm">
         {% csrf_token %}
         
+        <input type="hidden" name="detalle_gastos" id="inputDetalleGastos" value="{{ rendicion.detalle_gastos|default:'[]' }}">
+
         <div class="row">
             <div class="col-lg-7 mb-4">
                 <div class="card shadow-sm border-0 h-100">
@@ -58,38 +60,37 @@
                             <tbody>
                                 <tr>
                                     <td class="ps-4 fw-bold">Lipigas 5kg <span class="badge bg-secondary ms-1">5kg</span></td>
-                                    <td><input type="number" name="gas_5kg" value="{{ rendicion.gas_5kg }}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gas_5kg" value="{% if rendicion.gas_5kg %}{{ rendicion.gas_5kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
                                 <tr>
                                     <td class="ps-4 fw-bold">Lipigas 11kg <span class="badge bg-secondary ms-1">11kg</span></td>
-                                    <td><input type="number" name="gas_11kg" value="{{ rendicion.gas_11kg }}" class="form-control text-center bg-light input-cilindro" data-peso="11" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gas_11kg" value="{% if rendicion.gas_11kg %}{{ rendicion.gas_11kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="11" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
                                 <tr>
                                     <td class="ps-4 fw-bold">Lipigas 15kg <span class="badge bg-secondary ms-1">15kg</span></td>
-                                    <td><input type="number" name="gas_15kg" value="{{ rendicion.gas_15kg }}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gas_15kg" value="{% if rendicion.gas_15kg %}{{ rendicion.gas_15kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
                                 <tr>
                                     <td class="ps-4 fw-bold">Lipigas 45kg <span class="badge bg-secondary ms-1">45kg</span></td>
-                                    <td><input type="number" name="gas_45kg" value="{{ rendicion.gas_45kg }}" class="form-control text-center bg-light input-cilindro" data-peso="45" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gas_45kg" value="{% if rendicion.gas_45kg %}{{ rendicion.gas_45kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="45" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
-                                
                                 <tr>
                                     <td class="ps-4 fw-bold text-primary">05 Cat <span class="badge bg-primary ms-1">5kg</span></td>
-                                    <td><input type="number" name="gasc_5kg" value="{{ rendicion.gasc_5kg }}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gasc_5kg" value="{% if rendicion.gasc_5kg %}{{ rendicion.gasc_5kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
                                 <tr>
                                     <td class="ps-4 fw-bold text-primary">15 Cat <span class="badge bg-primary ms-1">15kg</span></td>
-                                    <td><input type="number" name="gasc_15kg" value="{{ rendicion.gasc_15kg }}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gasc_15kg" value="{% if rendicion.gasc_15kg %}{{ rendicion.gasc_15kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
                                 <tr>
                                     <td class="ps-4 fw-bold text-info">Ultra <span class="badge bg-info text-dark ms-1">15kg</span></td>
-                                    <td><input type="number" name="gas_ultra_15kg" value="{{ rendicion.gas_ultra_15kg }}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td><input type="number" name="gas_ultra_15kg" value="{% if rendicion.gas_ultra_15kg %}{{ rendicion.gas_ultra_15kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
                                     <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
                                 </tr>
                             </tbody>
@@ -108,7 +109,7 @@
                         <label class="form-label fw-bold text-danger small"><i class="fas fa-exclamation-circle me-1"></i> CILINDROS DEFECTUOSOS (No suman Kg)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-danger text-white border-danger">Cantidad</span>
-                            <input type="number" name="cilindros_defectuosos" value="{{ rendicion.cilindros_defectuosos }}" class="form-control border-danger" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                            <input type="number" name="cilindros_defectuosos" value="{% if rendicion.cilindros_defectuosos %}{{ rendicion.cilindros_defectuosos }}{% endif %}" class="form-control border-danger" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                         </div>
                     </div>
                 </div>
@@ -125,38 +126,54 @@
                             <label class="form-label fw-bold text-dark">1. Total Venta del Día (Guía)</label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text bg-white text-success">$</span>
-                                <input type="number" id="inputTotalVenta" name="total_venta" value="{{ rendicion.total_venta }}" class="form-control fw-bold input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                <input type="number" id="inputTotalVenta" name="total_venta" value="{% if rendicion.total_venta %}{{ rendicion.total_venta }}{% endif %}" class="form-control fw-bold input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                             </div>
-                            <div class="form-text">Monto total que indica la guía o máquina.</div>
                         </div>
 
                         <hr class="my-4">
 
-                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Descuentos al Efectivo</h6>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Descuentos y Gastos</h6>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary small">Vales/Prepago</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" id="inputVales" name="monto_vales" value="{{ rendicion.monto_vales }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                        <div class="row g-2 mb-3">
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-secondary small">Vales/Prepago</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="inputVales" name="monto_vales" value="{% if rendicion.monto_vales %}{{ rendicion.monto_vales }}{% endif %}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-secondary small">Transbank (Tarjetas)</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="inputTransbank" name="monto_transbank" value="{% if rendicion.monto_transbank %}{{ rendicion.monto_transbank }}{% endif %}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-secondary small">Crédito Empresa</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="inputCredito" name="monto_credito" value="{% if rendicion.monto_credito %}{{ rendicion.monto_credito }}{% endif %}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-secondary small">Transbank (Tarjetas)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" id="inputTransbank" name="monto_transbank" value="{{ rendicion.monto_transbank }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                        <div class="p-3 bg-light rounded border mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold text-warning-emphasis small mb-0"><i class="fas fa-receipt me-1"></i> Lista de Gastos</label>
+                                {% if not rendicion.cerrado %}
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold" onclick="agregarFilaGasto()">
+                                        <i class="fas fa-plus me-1"></i> Agregar
+                                    </button>
+                                {% endif %}
                             </div>
-                        </div>
 
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-secondary small">Crédito Empresa</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" id="inputCredito" name="monto_credito" value="{{ rendicion.monto_credito }}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                            <div id="contenedorGastos">
+                                </div>
+                            
+                            <div class="text-end mt-2 pt-2 border-top border-secondary-subtle">
+                                <small class="fw-bold text-muted">Total Gastos: <span id="displayTotalGastos">$0</span></small>
                             </div>
-                            <div class="form-text small text-muted">Ventas a crédito que no ingresan efectivo.</div>
                         </div>
 
                         <div class="alert alert-secondary d-flex justify-content-between align-items-center py-2 mb-4">
@@ -168,21 +185,18 @@
                             <label class="form-label fw-bold text-success">💵 Efectivo Real Entregado</label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text bg-success text-white border-success">$</span>
-                                <input type="number" id="inputEfectivoReal" name="efectivo_entregado" value="{{ rendicion.efectivo_entregado }}" class="form-control fw-bold border-success input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                <input type="number" id="inputEfectivoReal" name="efectivo_entregado" value="{% if rendicion.efectivo_entregado %}{{ rendicion.efectivo_entregado }}{% endif %}" class="form-control fw-bold border-success input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
                             </div>
                         </div>
 
                     </div>
                 </div>
 
-                <div class="card text-center border-0 shadow-sm" id="cardEstadoFlujo" style="background-color: #f8f9fa; transition: all 0.3s;"> 
+                <div class="card text-center border-0 shadow-sm" id="cardEstadoFlujo" style="background-color: #f8f9fa;"> 
                     <div class="card-body py-4">
                         <h6 class="text-uppercase fw-bold mb-2" id="tituloEstado">Diferencia</h6>
                         <h2 class="display-4 fw-bold mb-0" id="displayDiferencia">$0</h2>
-                        
-                        <div id="badgeEstado" class="badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6">
-                            Pendiente
-                        </div>
+                        <div id="badgeEstado" class="badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6">Pendiente</div>
                     </div>
                 </div>
 
@@ -191,21 +205,18 @@
                         <button type="submit" name="accion" value="guardar" class="btn btn-primary btn-lg rounded-pill shadow">
                             <i class="fas fa-save me-2"></i> Guardar Cambios
                         </button>
-                        
                         <button type="submit" name="accion" value="cerrar" onclick="return confirm('¿Estás seguro de CERRAR esta rendición? No podrás editarla después.');" class="btn btn-danger btn-lg rounded-pill shadow">
                             <i class="fas fa-lock me-2"></i> Cerrar Caja
                         </button>
                     </div>
                 {% else %}
                     <div class="alert alert-danger text-center mt-4">
-                        <i class="fas fa-lock me-2"></i> <strong>Caja Cerrada</strong><br>
-                        No se permiten más cambios.
+                        <i class="fas fa-lock me-2"></i> <strong>Caja Cerrada</strong>
                     </div>
                 {% endif %}
 
             </div>
         </div>
-
     </form>
 </div>
 
@@ -213,104 +224,192 @@
     document.addEventListener('DOMContentLoaded', function() {
         
         // ==========================================
-        // 1. LÓGICA DE KILOS (IZQUIERDA)
+        // 1. LÓGICA DE KILOS (Sin cambios)
         // ==========================================
         const inputsCilindros = document.querySelectorAll('.input-cilindro');
         const displayTotalKilos = document.getElementById('displayTotalKilos');
 
         function calcularKilos() {
             let totalKilos = 0;
-
             inputsCilindros.forEach(input => {
                 const cantidad = parseFloat(input.value) || 0;
                 const peso = parseFloat(input.dataset.peso) || 0;
                 const subtotal = cantidad * peso;
-
-                const row = input.closest('tr');
-                const subtotalSpan = row.querySelector('.subtotal-kg');
-                if(subtotalSpan) subtotalSpan.textContent = subtotal;
-
+                input.closest('tr').querySelector('.subtotal-kg').textContent = subtotal;
                 totalKilos += subtotal;
             });
-
             displayTotalKilos.textContent = totalKilos.toLocaleString('es-CL');
         }
+        inputsCilindros.forEach(input => input.addEventListener('input', calcularKilos));
+        calcularKilos();
 
         // ==========================================
-        // 2. LÓGICA DE PLATAS (DERECHA) - ACTUALIZADO
+        // 2. LÓGICA DE GASTOS (CORREGIDA: CÁLCULO EN TIEMPO REAL)
         // ==========================================
-        const inputsPlata = document.querySelectorAll('.input-plata');
-        
+        const contenedorGastos = document.getElementById('contenedorGastos');
+        const inputDetalleGastos = document.getElementById('inputDetalleGastos');
+        const displayTotalGastos = document.getElementById('displayTotalGastos');
+        let listaGastos = [];
+
+        // Cargar datos existentes
+        try {
+            listaGastos = JSON.parse(inputDetalleGastos.value);
+        } catch (e) {
+            listaGastos = [];
+        }
+
+        // Función A: Solo suma los montos y actualiza textos (Sin redibujar HTML para no perder cursor)
+        function actualizarSumasVisuales() {
+            let totalG = 0;
+            listaGastos.forEach(g => {
+                totalG += (parseInt(g.monto) || 0);
+            });
+            
+            // Actualizamos el texto "Total Gastos"
+            displayTotalGastos.textContent = '$ ' + totalG.toLocaleString('es-CL');
+            
+            // Guardamos en el input oculto para que Python lo reciba
+            inputDetalleGastos.value = JSON.stringify(listaGastos);
+            
+            // Recalculamos la caja general
+            calcularPlatas(); 
+        }
+
+        // Función B: Dibuja las filas (Solo se usa al iniciar, agregar o borrar)
+        function renderizarGastos() {
+            contenedorGastos.innerHTML = '';
+            
+            listaGastos.forEach((gasto, index) => {
+                const monto = parseInt(gasto.monto) || 0;
+                
+                const row = document.createElement('div');
+                row.className = 'row g-1 mb-2 align-items-center';
+                
+                // NOTA: Usamos 'oninput' en lugar de 'onchange' para respuesta inmediata
+                row.innerHTML = `
+                    <div class="col-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control fw-bold text-warning-emphasis" 
+                                   value="${monto === 0 ? '' : monto}" 
+                                   placeholder="0"
+                                   oninput="actualizarGastoData(${index}, 'monto', this.value)" 
+                                   {% if rendicion.cerrado %}disabled{% endif %}>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <input type="text" class="form-control form-control-sm" 
+                               value="${gasto.desc}" 
+                               placeholder="Detalle (Ej: Colación)" 
+                               oninput="actualizarGastoData(${index}, 'desc', this.value)" 
+                               {% if rendicion.cerrado %}disabled{% endif %}>
+                    </div>
+                    <div class="col-2 text-end">
+                        {% if not rendicion.cerrado %}
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="eliminarGasto(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                `;
+                contenedorGastos.appendChild(row);
+            });
+
+            if (listaGastos.length === 0) {
+                contenedorGastos.innerHTML = '<p class="text-muted small text-center mb-0 fst-italic">Sin gastos registrados</p>';
+            }
+
+            actualizarSumasVisuales();
+        }
+
+        // Evento: Agregar fila (Dibuja de nuevo)
+        window.agregarFilaGasto = function() {
+            listaGastos.push({ monto: 0, desc: '' });
+            renderizarGastos(); 
+        };
+
+        // Evento: Eliminar fila (Dibuja de nuevo)
+        window.eliminarGasto = function(index) {
+            listaGastos.splice(index, 1);
+            renderizarGastos();
+        };
+
+        // Evento: Escribir (SOLO actualiza datos, NO dibuja de nuevo para no perder el cursor)
+        window.actualizarGastoData = function(index, campo, valor) {
+            listaGastos[index][campo] = valor;
+            actualizarSumasVisuales(); // Solo recalculamos números
+        };
+
+        // ==========================================
+        // 3. LÓGICA DE PLATAS
+        // ==========================================
         const inTotalVenta = document.getElementById('inputTotalVenta');
         const inVales = document.getElementById('inputVales');
         const inTransbank = document.getElementById('inputTransbank');
-        const inCredito = document.getElementById('inputCredito'); // <--- NUEVO SELECTOR
+        const inCredito = document.getElementById('inputCredito');
         const inEfectivoReal = document.getElementById('inputEfectivoReal');
-
+        
         const dispEsperado = document.getElementById('displayEfectivoEsperado');
         const dispDiferencia = document.getElementById('displayDiferencia');
         const cardEstado = document.getElementById('cardEstadoFlujo');
         const badgeEstado = document.getElementById('badgeEstado');
-        const tituloEstado = document.getElementById('tituloEstado');
-
+        
         function calcularPlatas() {
             const totalVenta = parseInt(inTotalVenta.value) || 0;
             const vales = parseInt(inVales.value) || 0;
             const transbank = parseInt(inTransbank.value) || 0;
-            const credito = parseInt(inCredito.value) || 0; // <--- VALOR DEL NUEVO INPUT
+            const credito = parseInt(inCredito.value) || 0;
             const efectivoReal = parseInt(inEfectivoReal.value) || 0;
 
-            // 1. Calcular cuánto efectivo debería tener el trabajador
-            // AHORA RESTAMOS TAMBIÉN EL CRÉDITO
-            const efectivoEsperado = totalVenta - (vales + transbank + credito);
+            // Sumar gastos desde la lista en memoria
+            let totalGastos = 0;
+            listaGastos.forEach(g => totalGastos += (parseInt(g.monto) || 0));
+
+            const efectivoEsperado = totalVenta - (vales + transbank + credito + totalGastos);
             
             dispEsperado.textContent = '$ ' + efectivoEsperado.toLocaleString('es-CL');
-
             const diferencia = efectivoReal - efectivoEsperado;
+            
+            // Formateo visual
+            dispDiferencia.className = 'display-4 fw-bold mb-0';
+            cardEstado.classList.remove('bg-light', 'bg-danger-subtle', 'bg-success-subtle', 'bg-warning-subtle', 'bg-info-subtle');
+            badgeEstado.className = 'badge rounded-pill px-4 mt-3 py-2 fs-6';
 
-            dispDiferencia.textContent = '$ ' + Math.abs(diferencia).toLocaleString('es-CL');
-
-            cardEstado.classList.remove('bg-light', 'bg-danger-subtle', 'bg-success-subtle', 'bg-warning-subtle');
-            badgeEstado.classList.remove('bg-secondary', 'bg-danger', 'bg-success', 'bg-primary');
-            dispDiferencia.classList.remove('text-danger', 'text-success', 'text-primary');
-
-            if (totalVenta === 0 && efectivoReal === 0) {
+            if (totalVenta === 0 && efectivoReal === 0 && totalGastos === 0) {
                 cardEstado.style.backgroundColor = '#f8f9fa';
+                badgeEstado.classList.add('bg-secondary');
                 badgeEstado.textContent = 'Pendiente';
-                badgeEstado.className = 'badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6';
-                tituloEstado.textContent = 'Diferencia';
                 dispDiferencia.textContent = '$0';
             } 
             else if (diferencia === 0) {
                 cardEstado.style.backgroundColor = '#d1e7dd';
-                tituloEstado.textContent = 'Estado de Caja';
+                badgeEstado.classList.add('bg-success');
                 badgeEstado.textContent = '✨ Cuadrado Perfecto';
-                badgeEstado.className = 'badge bg-success rounded-pill px-4 mt-3 py-2 fs-6';
                 dispDiferencia.classList.add('text-success');
+                dispDiferencia.textContent = '$0';
             } 
             else if (diferencia < 0) {
                 cardEstado.style.backgroundColor = '#f8d7da'; 
-                tituloEstado.textContent = 'Faltante de Caja';
-                badgeEstado.textContent = '⚠️ Faltante (Descuento)';
-                badgeEstado.className = 'badge bg-danger rounded-pill px-4 mt-3 py-2 fs-6';
+                badgeEstado.classList.add('bg-danger');
+                badgeEstado.textContent = '⚠️ Faltante';
                 dispDiferencia.textContent = '- $ ' + Math.abs(diferencia).toLocaleString('es-CL');
                 dispDiferencia.classList.add('text-danger');
             } 
             else {
                 cardEstado.style.backgroundColor = '#cff4fc';
-                tituloEstado.textContent = 'Sobrante de Caja';
-                badgeEstado.textContent = '💰 Sobrante (A favor)';
-                badgeEstado.className = 'badge bg-primary rounded-pill px-4 mt-3 py-2 fs-6';
+                badgeEstado.classList.add('bg-primary');
+                badgeEstado.textContent = '💰 Sobrante';
                 dispDiferencia.textContent = '+ $ ' + Math.abs(diferencia).toLocaleString('es-CL');
                 dispDiferencia.classList.add('text-primary');
             }
         }
 
-        inputsCilindros.forEach(input => input.addEventListener('input', calcularKilos));
+        const inputsPlata = document.querySelectorAll('.input-plata');
         inputsPlata.forEach(input => input.addEventListener('input', calcularPlatas));
 
-        calcularKilos();
-        calcularPlatas();
+        // INICIALIZACIÓN
+        renderizarGastos(); // Dibuja la lista inicial
+        calcularPlatas();   // Calcula totales iniciales
     });
 </script>
 

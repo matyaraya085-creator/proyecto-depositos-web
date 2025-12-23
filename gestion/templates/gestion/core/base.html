@@ -36,15 +36,9 @@
 
         <div class="header-right">
             
-            {% if user.is_superuser %}
-                <a href="{% url 'gestion_trabajadores' %}" class="btn-workers">
-                    <i class="fas fa-users"></i> Gestión Trabajadores
-                </a>
-            {% else %}
-                <span class="btn-workers btn-locked">
-                    <i class="fas fa-lock"></i> Gestión Trabajadores
-                </span>
-            {% endif %}
+            <a href="{% url 'gestion_trabajadores' %}" class="btn-workers">
+                <i class="fas fa-users"></i> Gestión Trabajadores
+            </a>
             
             <div class="notification-wrapper">
                 <i class="fas fa-bell notification-bell"></i>

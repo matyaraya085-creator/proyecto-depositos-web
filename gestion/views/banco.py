@@ -286,11 +286,11 @@ def editar_lote(request, lote_id):
         lote.save() 
         return redirect('editar_lote', lote_id=lote.id)
 
-    # --- LÓGICA DE FILTRADO DE TRABAJADORES CORREGIDA ---
+    # --- LÓGICA DE FILTRADO DE TRABAJADORES ---
     if 'Manuel' in lote.bodega_nombre: 
-        filtro_bodega = '1221'  # <--- CORREGIDO: Busca el código, no el nombre
+        filtro_bodega = '1221'  
     else:
-        filtro_bodega = '1225'  # <--- CORREGIDO: Busca el código, no el nombre
+        filtro_bodega = '1225'  
         
     trabajadores_disponibles = Trabajador.objects.filter(
         Q(bodega_asignada=filtro_bodega) | Q(bodega_asignada='Ambos')
@@ -313,7 +313,7 @@ def editar_lote(request, lote_id):
     context = {
         'lote': lote,
         'aportes': aportes,
-        'trabajadores_disponibles': trabajadores_disponibles, # Enviamos la lista filtrada
+        'trabajadores_disponibles': trabajadores_disponibles,
         'denominaciones': desglose_para_plantilla,
         'cheque_guardado': lote.total_cheques,
         'lote_esta_cerrado': lote.cerrado,
@@ -347,7 +347,6 @@ def agregar_aporte(request, lote_id):
             lote.diferencia = lote.total_aportes - total_desglose_general
             lote.save()
     
-    # Redirigir siempre a la misma página (efecto "sin salir")
     return redirect('editar_lote', lote_id=lote.id)
 
 @login_required
@@ -440,12 +439,19 @@ def generar_pdf_lote(request, lote_id):
 
 @login_required
 def eliminar_lote(request, lote_id):
-    if not request.user.is_superuser:
-        return redirect('home')
+    """
+    Permite eliminar un lote.
+    - Superusuario: Puede eliminar siempre (salvo otras restricciones de negocio si existieran).
+    - Usuario Normal: Solo puede eliminar si el lote NO está cerrado.
+    """
+    lote = get_object_or_404(DepositoDiario, id=lote_id)
+    
+    # Validamos permisos:
+    # Si NO es superuser Y el lote está cerrado -> PROHIBIDO
+    if not request.user.is_superuser and lote.cerrado:
+        return redirect('home')  # O podrías redirigir a 'deposito_bodega' con un mensaje de error
 
     if request.method == 'POST':
-        lote = get_object_or_404(DepositoDiario, id=lote_id)
-        
         bodega_nombre = lote.bodega_nombre
         fecha_str = lote.fecha.strftime('%Y-%m-%d')
         

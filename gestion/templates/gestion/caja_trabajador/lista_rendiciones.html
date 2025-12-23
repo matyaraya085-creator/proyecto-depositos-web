@@ -38,7 +38,7 @@
                     {% endif %}
                     
                 {% else %}
-                    <button type="submit" name="accion_global" value="cerrar_dia" class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="return confirm('¿Confirmas el CIERRE GLOBAL de hoy? Nadie podrá agregar ni editar turnos.');">
+                    <button type="submit" name="accion_global" value="cerrar_dia" class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="return confirm('¿Confirmas el CIERRE GLOBAL de hoy? Todas las cajas individuales se cerrarán.');">
                         <i class="fas fa-lock me-1"></i> CERRAR DÍA
                     </button>
                 {% endif %}
@@ -201,11 +201,13 @@
                                             {% endif %}
                                         </a>
                                         
-                                        {% if user.is_superuser and not esta_cerrado_global %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                onclick="if(confirm('¿ADMIN: Eliminar rendición de {{ r.trabajador.nombre }}?')) location.href='{% url 'eliminar_rendicion' r.id %}'">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        {% if not esta_cerrado_global %}
+                                            {% if user.is_superuser or not r.cerrado %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="if(confirm('¿Eliminar rendición de {{ r.trabajador.nombre }}?\n\nEsta acción no se puede deshacer.')) location.href='{% url 'eliminar_rendicion' r.id %}'">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                 </td>
