@@ -12,6 +12,7 @@
                     <i class="fas fa-lock text-danger me-2"></i>Rendición Cerrada
                 {% else %}
                     <i class="fas fa-pen-to-square text-primary me-2"></i>Editando Rendición
+                    <span id="auto-save-status" class="fs-6 ms-3 fw-bold" style="transition: color 0.3s;"></span>
                 {% endif %}
             </h2>
             <p class="text-muted mb-0">
@@ -224,7 +225,78 @@
     document.addEventListener('DOMContentLoaded', function() {
         
         // ==========================================
-        // 1. LÓGICA DE KILOS (Sin cambios)
+        // 0. CONFIGURACIÓN AUTO-GUARDADO (AJAX)
+        // ==========================================
+        const statusSpan = document.getElementById('auto-save-status');
+        const formRendicion = document.getElementById('rendicionForm');
+        // URL generada por Django apuntando a la vista API
+        const urlAutoSave = "{% url 'api_auto_guardar_rendicion' rendicion.id %}";
+        let timeoutGuardado = null;
+
+        function autoGuardar() {
+            // Si la rendición está cerrada y NO es superusuario, no intentamos guardar
+            {% if rendicion.cerrado and not user.is_superuser %} return; {% endif %}
+
+            if(statusSpan) {
+                statusSpan.style.color = '#e67e22'; // Naranja
+                statusSpan.innerHTML = '<i class="fas fa-sync fa-spin me-1"></i> Guardando...';
+            }
+
+            // IMPORTANTE: Antes de crear el FormData, debemos asegurar que el input hidden
+            // del JSON de gastos tenga el valor más reciente de la variable 'listaGastos'.
+            const inputDetalleGastos = document.getElementById('inputDetalleGastos');
+            if(inputDetalleGastos) {
+                // listaGastos se define más abajo, pero como es var/let en scope global del script funcionará
+                // Asegúrate de que listaGastos esté accesible.
+                inputDetalleGastos.value = JSON.stringify(listaGastos);
+            }
+
+            const formData = new FormData(formRendicion);
+
+            fetch(urlAutoSave, {
+                method: 'POST',
+                body: formData,
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'ok') {
+                    if(statusSpan) {
+                        statusSpan.style.color = '#198754'; // Verde Success
+                        statusSpan.innerHTML = '<i class="fas fa-check me-1"></i> Guardado';
+                        // Borrar el mensaje después de 2 segundos
+                        setTimeout(() => { statusSpan.innerHTML = ""; }, 2000);
+                    }
+                } else {
+                    console.error("Error guardando:", data);
+                    if(statusSpan) {
+                        statusSpan.style.color = '#dc3545';
+                        statusSpan.innerText = "Error al guardar";
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error de red:', error);
+                if(statusSpan) {
+                    statusSpan.style.color = '#dc3545';
+                    statusSpan.innerText = "Error de conexión";
+                }
+            });
+        }
+
+        function triggerAutoGuardado() {
+            // Reiniciamos el reloj cada vez que se teclea
+            if(statusSpan) statusSpan.innerHTML = "...";
+            clearTimeout(timeoutGuardado);
+            // Espera 0.8 segundos (800ms) después de dejar de escribir para guardar
+            timeoutGuardado = setTimeout(autoGuardar, 800);
+        }
+
+        // ==========================================
+        // 1. LÓGICA DE KILOS
         // ==========================================
         const inputsCilindros = document.querySelectorAll('.input-cilindro');
         const displayTotalKilos = document.getElementById('displayTotalKilos');
@@ -240,52 +312,61 @@
             });
             displayTotalKilos.textContent = totalKilos.toLocaleString('es-CL');
         }
-        inputsCilindros.forEach(input => input.addEventListener('input', calcularKilos));
+        
+        inputsCilindros.forEach(input => {
+            input.addEventListener('input', function() {
+                calcularKilos();
+                triggerAutoGuardado(); // <--- Trigger agregado
+            });
+        });
+        
+        // Input de cilindros defectuosos (no es clase .input-cilindro)
+        const inDefectuosos = document.querySelector('input[name="cilindros_defectuosos"]');
+        if (inDefectuosos) {
+            inDefectuosos.addEventListener('input', triggerAutoGuardado);
+        }
+
         calcularKilos();
 
         // ==========================================
-        // 2. LÓGICA DE GASTOS (CORREGIDA: CÁLCULO EN TIEMPO REAL)
+        // 2. LÓGICA DE GASTOS
         // ==========================================
         const contenedorGastos = document.getElementById('contenedorGastos');
         const inputDetalleGastos = document.getElementById('inputDetalleGastos');
         const displayTotalGastos = document.getElementById('displayTotalGastos');
-        let listaGastos = [];
+        
+        // Hacemos listaGastos global para que autoGuardar acceda a ella
+        window.listaGastos = [];
 
         // Cargar datos existentes
         try {
-            listaGastos = JSON.parse(inputDetalleGastos.value);
+            window.listaGastos = JSON.parse(inputDetalleGastos.value);
         } catch (e) {
-            listaGastos = [];
+            window.listaGastos = [];
         }
 
-        // Función A: Solo suma los montos y actualiza textos (Sin redibujar HTML para no perder cursor)
         function actualizarSumasVisuales() {
             let totalG = 0;
-            listaGastos.forEach(g => {
+            window.listaGastos.forEach(g => {
                 totalG += (parseInt(g.monto) || 0);
             });
             
-            // Actualizamos el texto "Total Gastos"
             displayTotalGastos.textContent = '$ ' + totalG.toLocaleString('es-CL');
+            inputDetalleGastos.value = JSON.stringify(window.listaGastos);
             
-            // Guardamos en el input oculto para que Python lo reciba
-            inputDetalleGastos.value = JSON.stringify(listaGastos);
-            
-            // Recalculamos la caja general
             calcularPlatas(); 
+            triggerAutoGuardado(); // <--- Trigger agregado (Guarda todo, incluido el nuevo JSON)
         }
 
-        // Función B: Dibuja las filas (Solo se usa al iniciar, agregar o borrar)
         function renderizarGastos() {
             contenedorGastos.innerHTML = '';
             
-            listaGastos.forEach((gasto, index) => {
+            window.listaGastos.forEach((gasto, index) => {
                 const monto = parseInt(gasto.monto) || 0;
                 
                 const row = document.createElement('div');
                 row.className = 'row g-1 mb-2 align-items-center';
                 
-                // NOTA: Usamos 'oninput' en lugar de 'onchange' para respuesta inmediata
                 row.innerHTML = `
                     <div class="col-4">
                         <div class="input-group input-group-sm">
@@ -315,29 +396,32 @@
                 contenedorGastos.appendChild(row);
             });
 
-            if (listaGastos.length === 0) {
+            if (window.listaGastos.length === 0) {
                 contenedorGastos.innerHTML = '<p class="text-muted small text-center mb-0 fst-italic">Sin gastos registrados</p>';
             }
 
-            actualizarSumasVisuales();
+            // Al renderizar (inicio o borrar fila) también actualizamos sumas (pero ojo con bucles infinitos si llamamos a guardar aqui, mejor no triggerAutoGuardado en carga inicial)
+             let totalG = 0;
+             window.listaGastos.forEach(g => { totalG += (parseInt(g.monto) || 0); });
+             displayTotalGastos.textContent = '$ ' + totalG.toLocaleString('es-CL');
+             calcularPlatas();
         }
 
-        // Evento: Agregar fila (Dibuja de nuevo)
         window.agregarFilaGasto = function() {
-            listaGastos.push({ monto: 0, desc: '' });
+            window.listaGastos.push({ monto: 0, desc: '' });
             renderizarGastos(); 
+            triggerAutoGuardado(); // Guardar al agregar fila vacía
         };
 
-        // Evento: Eliminar fila (Dibuja de nuevo)
         window.eliminarGasto = function(index) {
-            listaGastos.splice(index, 1);
+            window.listaGastos.splice(index, 1);
             renderizarGastos();
+            triggerAutoGuardado(); // Guardar al eliminar fila
         };
 
-        // Evento: Escribir (SOLO actualiza datos, NO dibuja de nuevo para no perder el cursor)
         window.actualizarGastoData = function(index, campo, valor) {
-            listaGastos[index][campo] = valor;
-            actualizarSumasVisuales(); // Solo recalculamos números
+            window.listaGastos[index][campo] = valor;
+            actualizarSumasVisuales(); // Esto llama al triggerAutoGuardado
         };
 
         // ==========================================
@@ -361,9 +445,8 @@
             const credito = parseInt(inCredito.value) || 0;
             const efectivoReal = parseInt(inEfectivoReal.value) || 0;
 
-            // Sumar gastos desde la lista en memoria
             let totalGastos = 0;
-            listaGastos.forEach(g => totalGastos += (parseInt(g.monto) || 0));
+            window.listaGastos.forEach(g => totalGastos += (parseInt(g.monto) || 0));
 
             const efectivoEsperado = totalVenta - (vales + transbank + credito + totalGastos);
             
@@ -405,11 +488,17 @@
         }
 
         const inputsPlata = document.querySelectorAll('.input-plata');
-        inputsPlata.forEach(input => input.addEventListener('input', calcularPlatas));
+        inputsPlata.forEach(input => {
+            input.addEventListener('input', function() {
+                calcularPlatas();
+                triggerAutoGuardado(); // <--- Trigger agregado
+            });
+        });
 
         // INICIALIZACIÓN
-        renderizarGastos(); // Dibuja la lista inicial
-        calcularPlatas();   // Calcula totales iniciales
+        renderizarGastos(); 
+        // No llamamos triggerAutoGuardado aquí para evitar guardar al abrir la página
+        calcularPlatas();   
     });
 </script>
 

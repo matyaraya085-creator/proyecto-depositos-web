@@ -1,0 +1,54 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    
+    <div class="card shadow-lg border-0" style="width: 100%; max-width: 600px;">
+        
+        <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+            <h4 class="mb-0 fw-bold text-success"><i class="fas fa-file-excel me-2"></i> Exportar Liquidación</h4>
+            <a href="{% url 'ver_liquidacion' liquidacion.id %}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i class="fas fa-arrow-left me-1"></i> Volver atrás
+            </a>
+        </div>
+
+        <div class="card-body p-5 text-center">
+            
+            <div class="mb-4">
+                <i class="fas fa-file-invoice-dollar fa-4x text-success opacity-50 mb-3"></i>
+                <h5 class="fw-bold">{{ liquidacion.trabajador.nombre }}</h5>
+                <p class="text-muted">Preparando archivo para periodo: <span class="fw-bold">{{ liquidacion.periodo }}</span></p>
+            </div>
+
+            <div class="d-grid gap-3 mb-5">
+                <button type="button" class="btn btn-light border py-3 text-start px-4 shadow-sm" disabled>
+                    <i class="fas fa-cog me-3 text-secondary"></i> Configuración de Columnas
+                    <span class="float-end text-muted small"><i class="fas fa-lock"></i></span>
+                </button>
+                
+                <button type="button" class="btn btn-light border py-3 text-start px-4 shadow-sm" disabled>
+                    <i class="fas fa-eye me-3 text-secondary"></i> Vista Previa del Documento
+                    <span class="float-end text-muted small"><i class="fas fa-lock"></i></span>
+                </button>
+                
+                <button type="button" class="btn btn-light border py-3 text-start px-4 shadow-sm" disabled>
+                    <i class="fas fa-envelope me-3 text-secondary"></i> Enviar por Correo
+                    <span class="float-end text-muted small"><i class="fas fa-lock"></i></span>
+                </button>
+            </div>
+
+            <div class="border-top pt-4">
+                <a href="{% url 'nomina_mensual' %}" class="btn btn-dark btn-lg rounded-pill px-5 shadow">
+                    FINALIZAR <i class="fas fa-check ms-2"></i>
+                </a>
+                <p class="text-muted small mt-2">Regresar al listado principal</p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

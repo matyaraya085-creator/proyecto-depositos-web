@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<div class="container-fluid" style="max-width: 900px;">
+<div class="container-fluid" style="max-width: 1100px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
         <div>
@@ -18,70 +18,277 @@
     <form method="POST">
         {% csrf_token %}
         
+        <input type="hidden" name="detalle_haberes" id="inputHaberes" value="{{ initial.json_haberes }}">
+        <input type="hidden" name="detalle_asignaciones" id="inputAsignaciones" value="{{ initial.json_asignaciones }}">
+        <input type="hidden" name="detalle_bonos" id="inputBonos" value="{{ initial.json_bonos }}">
+        <input type="hidden" name="detalle_descuentos" id="inputDescuentos" value="{{ initial.json_descuentos }}">
+
         <div class="row">
             
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-primary text-white py-3">
-                        <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Tiempo Trabajado</h5>
+                
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-clock me-2"></i>1. Tiempo Trabajado</h6>
                     </div>
-                    <div class="card-body p-4">
-                        
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-secondary">📅 Días Trabajados</label>
-                            <input type="number" name="dias" class="form-control form-control-lg text-center fw-bold" value="{{ initial.dias }}" min="0" max="30">
-                            <div class="form-text">Lo estándar son 30 días.</div>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label fw-bold text-secondary">⏱️ Horas Extras</label>
-                            <div class="input-group input-group-lg">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="form-label fw-bold small">Días Trabajados</label>
+                                <input type="number" name="dias" class="form-control text-center fw-bold" value="{{ initial.dias }}" min="0" max="30">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold small">Horas Extras</label>
                                 <input type="number" name="horas_extras" class="form-control text-center fw-bold" value="{{ initial.horas_extras }}" min="0" step="0.5">
-                                <span class="input-group-text bg-light">Hrs</span>
                             </div>
                         </div>
-
                     </div>
                 </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-plus-circle me-2"></i>2. Haberes (Imponibles)</h6>
+                        <button type="button" class="btn btn-sm btn-light text-success fw-bold rounded-pill" onclick="agregarItem('haberes')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body bg-light">
+                        <div id="container-haberes"></div>
+                        <div class="text-end mt-2 pt-2 border-top">
+                            <small class="fw-bold text-success">Total: <span id="total-haberes">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div class="col-md-6 mb-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-success text-white py-3">
-                        <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Haberes y Descuentos</h5>
+                
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header text-white py-2 d-flex justify-content-between align-items-center" style="background-color: #6610f2;">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-child me-2"></i>3. Asig. Familiares (Manual)</h6>
+                        <button type="button" class="btn btn-sm btn-light text-primary fw-bold rounded-pill" style="color: #6610f2 !important;" onclick="agregarItem('asignaciones')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
                     </div>
-                    <div class="card-body p-4">
-                        
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-secondary">🎁 Otros Haberes (Bonos/Aguinaldos)</label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text text-success">$</span>
-                                <input type="number" name="bonos" class="form-control fw-bold" value="{{ initial.bonos }}" placeholder="0">
-                            </div>
-                            <div class="form-text">Montos no imponibles o bonos especiales.</div>
+                    <div class="card-body bg-light">
+                        <div class="alert alert-light border small py-1 px-2 mb-2 text-muted">
+                            <i class="fas fa-info-circle me-1"></i> El sistema calcula el monto legal automáticamente. Usa esto solo para agregar bonos retroactivos o extras.
                         </div>
-
-                        <div class="mb-2">
-                            <label class="form-label fw-bold text-secondary">💸 Anticipos (Descuento)</label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text text-danger">$</span>
-                                <input type="number" name="anticipo" class="form-control fw-bold text-danger" value="{{ initial.anticipo }}" placeholder="0">
-                            </div>
+                        <div id="container-asignaciones"></div>
+                        <div class="text-end mt-2 pt-2 border-top">
+                            <small class="fw-bold" style="color: #6610f2;">Total Manual: <span id="total-asignaciones">$0</span></small>
                         </div>
-
                     </div>
                 </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-gift me-2"></i>4. Otros Haberes (No Imp.)</h6>
+                        <button type="button" class="btn btn-sm btn-light text-info fw-bold rounded-pill" onclick="agregarItem('bonos')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body bg-light">
+                        <div id="container-bonos"></div>
+                        <div class="text-end mt-2 pt-2 border-top">
+                            <small class="fw-bold text-info">Total: <span id="total-bonos">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-danger text-white py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-minus-circle me-2"></i>5. Descuentos y Anticipos</h6>
+                        <button type="button" class="btn btn-sm btn-light text-danger fw-bold rounded-pill" onclick="agregarItem('descuentos')">
+                            <i class="fas fa-plus"></i> Agregar Otro
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3 pb-3 border-bottom">
+                            <label class="form-label fw-bold small text-danger">Anticipo General (Fijo)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-danger bg-opacity-10 text-danger border-danger">$</span>
+                                <input type="number" name="anticipo" class="form-control fw-bold text-danger border-danger" value="{{ initial.anticipo }}" placeholder="0">
+                            </div>
+                        </div>
+
+                        <label class="form-label fw-bold small text-secondary">Otros Descuentos:</label>
+                        <div id="container-descuentos" class="bg-light p-2 rounded"></div>
+                        <div class="text-end mt-2">
+                            <small class="fw-bold text-danger">Total Otros: <span id="total-descuentos">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-warning text-dark py-2">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>6. Faltante de Caja ({{ periodo_mes_nombre }})</h6>
+                    </div>
+                    <div class="card-body bg-light">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-white border rounded">
+                            <span class="small fw-bold text-muted">Faltante Automático:</span>
+                            <span class="fw-bold text-dark" style="font-size: 1.1rem;">$ {{ faltante_automatico|default:0 }}</span>
+                            <input type="hidden" id="val_faltante_auto" value="{{ faltante_automatico|default:0 }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-success">Abono / Recuperación (Resta al Faltante)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-success bg-opacity-10 text-success border-success">$</span>
+                                <input type="number" name="abono_faltante" id="inputAbonoFaltante" 
+                                       class="form-control fw-bold text-success border-success" 
+                                       value="{{ initial.abono_faltante }}" placeholder="0">
+                            </div>
+                            <div class="form-text small">Monto que el trabajador pagó o devolvió antes del sueldo.</div>
+                        </div>
+
+                        <div class="text-end border-top pt-2">
+                            <small class="fw-bold text-danger">Total a Descontar: <span id="total-faltante-final">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </div>
 
-        <div class="d-grid gap-2 mt-2">
-            <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm py-3">
-                <i class="fas fa-cogs me-2"></i> Procesar y Generar Liquidación
+        <div class="d-grid gap-2 mt-4 pb-5">
+            <button type="submit" class="btn btn-dark btn-lg rounded-pill shadow-sm py-3 fw-bold">
+                <i class="fas fa-calculator me-2"></i> PROCESAR LIQUIDACIÓN
             </button>
         </div>
 
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Estado Global de Listas
+        const state = {
+            haberes: [],
+            asignaciones: [],
+            bonos: [],
+            descuentos: []
+        };
+
+        // Referencias DOM
+        const refs = {
+            haberes: { container: document.getElementById('container-haberes'), input: document.getElementById('inputHaberes'), display: document.getElementById('total-haberes') },
+            asignaciones: { container: document.getElementById('container-asignaciones'), input: document.getElementById('inputAsignaciones'), display: document.getElementById('total-asignaciones') },
+            bonos: { container: document.getElementById('container-bonos'), input: document.getElementById('inputBonos'), display: document.getElementById('total-bonos') },
+            descuentos: { container: document.getElementById('container-descuentos'), input: document.getElementById('inputDescuentos'), display: document.getElementById('total-descuentos') }
+        };
+
+        // Cargar datos iniciales
+        try { state.haberes = JSON.parse(refs.haberes.input.value); } catch(e) { state.haberes = []; }
+        try { state.asignaciones = JSON.parse(refs.asignaciones.input.value); } catch(e) { state.asignaciones = []; }
+        try { state.bonos = JSON.parse(refs.bonos.input.value); } catch(e) { state.bonos = []; }
+        try { state.descuentos = JSON.parse(refs.descuentos.input.value); } catch(e) { state.descuentos = []; }
+
+        // Función Genérica para Actualizar y Renderizar
+        function render(type) {
+            const list = state[type];
+            const ref = refs[type];
+            
+            ref.container.innerHTML = '';
+            let total = 0;
+
+            list.forEach((item, index) => {
+                total += (parseInt(item.monto) || 0);
+                
+                const row = document.createElement('div');
+                row.className = 'row g-1 mb-2 align-items-center';
+                
+                // Colores según tipo
+                let colorClass = 'text-success';
+                if(type === 'asignaciones') colorClass = 'text-primary';
+                if(type === 'bonos') colorClass = 'text-info';
+                if(type === 'descuentos') colorClass = 'text-danger';
+
+                row.innerHTML = `
+                    <div class="col-7">
+                        <input type="text" class="form-control form-control-sm" 
+                               value="${item.desc}" 
+                               placeholder="Descripción..."
+                               oninput="updateItem('${type}', ${index}, 'desc', this.value)">
+                    </div>
+                    <div class="col-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text ${colorClass}">$</span>
+                            <input type="number" class="form-control fw-bold text-end" 
+                                   value="${item.monto === 0 ? '' : item.monto}" 
+                                   placeholder="0"
+                                   oninput="updateItem('${type}', ${index}, 'monto', this.value)">
+                        </div>
+                    </div>
+                    <div class="col-1 text-end">
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="deleteItem('${type}', ${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                ref.container.appendChild(row);
+            });
+
+            if (list.length === 0) {
+                ref.container.innerHTML = '<p class="text-muted small text-center mb-0 fst-italic opacity-50">Lista vacía</p>';
+            }
+
+            // Actualizar Totales y Input Hidden
+            ref.display.textContent = '$ ' + total.toLocaleString('es-CL');
+            ref.input.value = JSON.stringify(list);
+        }
+
+        // --- FUNCIONES GLOBALES ---
+        
+        window.agregarItem = function(type) {
+            state[type].push({ desc: '', monto: '' });
+            render(type);
+        };
+
+        window.deleteItem = function(type, index) {
+            state[type].splice(index, 1);
+            render(type);
+        };
+
+        window.updateItem = function(type, index, field, value) {
+            state[type][index][field] = value;
+            // Solo actualizamos totales sin redibujar para no perder foco
+            let total = 0;
+            state[type].forEach(i => total += (parseInt(i.monto) || 0));
+            refs[type].display.textContent = '$ ' + total.toLocaleString('es-CL');
+            refs[type].input.value = JSON.stringify(state[type]);
+        };
+
+        // --- LÓGICA VISUAL PARA FALTANTE (Card 6) ---
+        const inputFaltanteAuto = document.getElementById('val_faltante_auto');
+        const inputAbono = document.getElementById('inputAbonoFaltante');
+        const spanTotalFaltante = document.getElementById('total-faltante-final');
+
+        function updateFaltanteVisual() {
+            const auto = parseFloat(inputFaltanteAuto.value) || 0;
+            const abono = parseFloat(inputAbono.value) || 0;
+            
+            // Lógica: Max(0, Auto - Abono)
+            let final = auto - abono;
+            if (final < 0) final = 0;
+
+            spanTotalFaltante.textContent = '$ ' + final.toLocaleString('es-CL');
+        }
+
+        // Listeners para faltante
+        inputAbono.addEventListener('input', updateFaltanteVisual);
+        
+        // Inicializar vistas
+        render('haberes');
+        render('asignaciones');
+        render('bonos');
+        render('descuentos');
+        updateFaltanteVisual(); // Inicializar faltante
+    });
+</script>
 
 {% endblock %}

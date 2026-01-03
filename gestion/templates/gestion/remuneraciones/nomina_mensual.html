@@ -1,5 +1,6 @@
 {% extends 'gestion/core/base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
 
@@ -8,11 +9,18 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-4">
         <div>
             <h2 class="fw-bold mb-0">📑 Nómina de Sueldos</h2>
-            <p class="text-muted">Periodo Actual: <span class="fw-bold text-dark">{{ periodo_str|default:'Octubre 2023' }}</span></p>
+            <p class="text-muted text-capitalize">Periodo: <span class="fw-bold text-dark">{{ periodo_str }}</span></p>
         </div>
         
-        <div class="d-flex gap-2">
-            <input type="month" class="form-control shadow-sm" value="{{ periodo_value|default:'2023-10' }}" style="width: auto;">
+        <div class="d-flex gap-2 align-items-center">
+            <form method="GET" class="d-flex align-items-center bg-white p-1 rounded shadow-sm border">
+                <label class="fw-bold text-muted small me-2 ps-2">MES:</label>
+                <input type="month" name="fecha" 
+                       class="form-control border-0 bg-transparent fw-bold text-primary" 
+                       value="{{ periodo_value }}" 
+                       onchange="this.form.submit()"
+                       style="width: auto;">
+            </form>
             
             <a href="{% url 'menu_remuneraciones' %}" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
                 <i class="fas fa-arrow-left"></i> Volver
@@ -21,106 +29,139 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm bg-primary text-white">
-                <div class="card-body">
-                    <h6 class="text-uppercase small opacity-75">Total a Pagar (Líquido)</h6>
-                    <h3 class="fw-bold mb-0">${{ total_a_pagar|floatformat:0|default:'0' }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-uppercase small text-muted">Estado de Avance</h6>
-                    <div class="d-flex align-items-center gap-2">
-                        <h3 class="fw-bold mb-0 text-dark">{{ calculados_count|default:'0' }}/{{ total_count|default:'0' }}</h3>
-                        {% if calculados_count == total_count and total_count > 0 %}
-                            <span class="badge bg-success">Completado</span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark">Pendientes</span>
-                        {% endif %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="text-uppercase small text-muted mb-1">Estado de Avance ({{ periodo_str }})</h6>
+                        <div class="d-flex align-items-center gap-3">
+                            <h3 class="fw-bold mb-0 text-dark">{{ calculados_count }} / {{ total_count }}</h3>
+                            {% if total_count > 0 %}
+                                {% if calculados_count == total_count %}
+                                    <span class="badge bg-success rounded-pill px-3 animate__animated animate__fadeIn">
+                                        <i class="fas fa-check-circle me-1"></i> Completado
+                                    </span>
+                                {% else %}
+                                    <div class="progress" style="width: 150px; height: 10px;">
+                                        <div class="progress-bar bg-warning" role="progressbar" 
+                                             style="width: {% widthratio calculados_count total_count 100 %}%;" 
+                                             aria-valuenow="{{ calculados_count }}" aria-valuemin="0" aria-valuemax="{{ total_count }}">
+                                        </div>
+                                    </div>
+                                    <span class="small text-muted fw-bold">{% widthratio calculados_count total_count 100 %}%</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">Sin Personal Interno</span>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-uppercase small text-muted">Sueldo Mínimo Ref.</h6>
-                    <h3 class="fw-bold mb-0 text-dark">$460.000</h3> 
+                    <div class="text-end d-none d-md-block">
+                        <i class="fas fa-users-cog fa-3x text-secondary opacity-25"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0 fw-bold text-secondary">Listado de Personal</h5>
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="mb-0 fw-bold text-primary">
+                <i class="fas fa-user-tie me-2"></i>Personal Contratado (Activo)
+            </h5>
         </div>
         <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="ps-4">Trabajador</th>
-                        <th>Cargo</th>
-                        <th>Sueldo Base</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-end pe-4">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in trabajadores %}
-                        {% with liquidacion=t.liquidaciones_actuales.0 %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-secondary small text-uppercase">
                         <tr>
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold me-3" style="width: 40px; height: 40px;">
-                                        {{ t.nombre|make_list|first|upper }}{{ t.nombre|cut:" "|make_list|last|upper|default:"" }}
+                            <th class="ps-4 py-3">Trabajador</th>
+                            <th>Cargo</th>
+                            <th>Sueldo Base</th>
+                            <th class="text-center">Estado Mes</th>
+                            <th class="text-end pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in trabajadores_lista %}
+                            {% with t=item.obj liquidacion=item.liquidacion %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold me-3 border border-primary border-opacity-25" style="width: 45px; height: 45px;">
+                                            {{ t.nombre|slice:":1" }}
+                                        </div>
+                                        <div>
+                                            <span class="d-block fw-bold text-dark">{{ t.nombre }}</span>
+                                            <span class="small text-muted rut-formatter">{{ t.rut|default:'' }}</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span class="d-block fw-bold">{{ t.nombre }}</span>
-                                        <span class="small text-muted">{{ t.rut|default:'Sin RUT' }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>{{ t.cargo|default:'N/A' }}</td>
-                            <td>${{ t.sueldo_base|floatformat:0 }}</td>
-                            <td class="text-center">
-                                {% if liquidacion %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success">✅ Calculado</span>
-                                {% else %}
-                                    <span class="badge bg-light text-secondary border">⏳ Pendiente</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end pe-4">
-                                {% if liquidacion %}
-                                    <div class="btn-group">
-                                        <a href="{% url 'ver_liquidacion' liquidacion.id %}" class="btn btn-sm btn-outline-success" title="Ver Liquidación">
-                                            <i class="fas fa-file-pdf"></i> Ver
+                                </td>
+                                <td class="text-muted fw-bold small">{{ t.cargo|default:'Operario' }}</td>
+                                <td class="fw-bold text-dark">${{ t.sueldo_base|intcomma }}</td>
+                                
+                                <td class="text-center">
+                                    {% if item.tiene_calculo %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">
+                                            <i class="fas fa-check me-1"></i> Calculado
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-3">
+                                            <i class="fas fa-clock me-1"></i> Pendiente
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="text-end pe-4">
+                                    {% if item.tiene_calculo %}
+                                        <div class="btn-group shadow-sm">
+                                            <a href="{% url 'ver_liquidacion' liquidacion.id %}" class="btn btn-sm btn-outline-primary fw-bold" title="Ver Liquidación">
+                                                <i class="fas fa-eye me-1"></i> Ver
+                                            </a>
+                                            <a href="{% url 'calcular_sueldo' liquidacion.id %}" class="btn btn-sm btn-outline-secondary" title="Recalcular">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <a href="{% url 'calcular_sueldo' t.id %}?periodo={{ periodo_value }}" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                                            <i class="fas fa-calculator me-2"></i> Procesar
                                         </a>
-                                        <a href="{% url 'calcular_sueldo' liquidacion.id %}" class="btn btn-sm btn-outline-secondary" title="Recalcular">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </a>
-                                    </div>
-                                {% else %}
-                                    <a href="{% url 'calcular_sueldo' t.id %}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
-                                        <i class="fas fa-calculator me-1"></i> Calcular
-                                    </a>
-                                {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fas fa-user-slash fa-3x mb-3 opacity-50"></i>
+                                <p class="mb-0 fw-bold">No se encontraron trabajadores activos con contrato.</p>
+                                <small>Verifica que tengan el tipo "INTERNO" y estén marcados como activos.</small>
                             </td>
                         </tr>
-                        {% endwith %}
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">No hay trabajadores registrados.</td>
-                    </tr>
-                    {% endfor %}
+                        {% endfor %}
                     </tbody>
-            </table>
+                </table>
+            </div>
         </div>
     </div>
-
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const rutElements = document.querySelectorAll('.rut-formatter');
+        
+        rutElements.forEach(el => {
+            let rut = el.innerText.trim();
+            if (rut && rut.length > 1) {
+                let cleanRut = rut.replace(/[^0-9kK]/g, '');
+                if (cleanRut.length > 1) {
+                    const dv = cleanRut.slice(-1);
+                    const cuerpo = cleanRut.slice(0, -1);
+                    const cuerpoFormateado = new Intl.NumberFormat('es-CL').format(cuerpo);
+                    el.innerText = `${cuerpoFormateado}-${dv}`;
+                }
+            }
+        });
+    });
+</script>
 
 {% endblock %}

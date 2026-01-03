@@ -9,6 +9,12 @@ BODEGA_CHOICES = [
     ('Ambos', 'Ambos'),
 ]
 
+# Opciones estrictas para facturación (Solo las físicas)
+BODEGA_FACTURACION_CHOICES = [
+    ('1221', '1221 (Manuel Peñafiel)'),
+    ('1225', '1225 (David Perry)'),
+]
+
 # Opciones para filtros y depósitos (Usadas en DepositoDiario)
 BODEGA_FILTRO_CHOICES = [
     ('Manuel Peñafiel', '1221 (Manuel Peñafiel)'),
@@ -55,10 +61,29 @@ class AsignacionFamiliarConfig(models.Model):
 # 3. TRABAJADOR
 # ==========================================================
 class Trabajador(models.Model):
+    TIPO_CHOICES = [
+        ('INTERNO', 'Interno (Contrato)'),
+        ('EXTERNO', 'Externo (Fletero/Apoyo)'),
+    ]
+
     nombre = models.CharField(max_length=255, verbose_name="Nombre Completo")
     rut = models.CharField(max_length=12, unique=True, null=True, verbose_name="RUT")
     
+    # --- NUEVOS CAMPOS ---
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='INTERNO', verbose_name="Tipo Trabajador")
+    activo = models.BooleanField(default=True, verbose_name="¿Trabaja Actualmente?")
+    filtro_trabajador = models.BooleanField(default=False, verbose_name="¿Habilitado en Filtros?")
+
     bodega_asignada = models.CharField(max_length=100, choices=BODEGA_CHOICES, default='Ambos')
+    
+    bodega_facturacion = models.CharField(
+        max_length=10, 
+        choices=BODEGA_FACTURACION_CHOICES, 
+        null=True, 
+        blank=True,
+        verbose_name="Bodega de Facturación"
+    )
+
     cargo = models.CharField(max_length=100, default="Operario", null=True, blank=True)
     fecha_ingreso = models.DateField(null=True, blank=True)
     
@@ -78,7 +103,7 @@ class Trabajador(models.Model):
 # 4. REMUNERACIÓN
 # ==========================================================
 class Remuneracion(models.Model):
-    trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE)
+    trabajador = models.ForeignKey(Trabajador, on_delete=models.PROTECT)
     periodo = models.CharField(max_length=7) 
     fecha_calculo = models.DateTimeField(auto_now_add=True)
     
@@ -86,6 +111,10 @@ class Remuneracion(models.Model):
     total_haberes = models.IntegerField()
     total_descuentos = models.IntegerField()
     
+    # Nuevos campos específicos para lógica estricta
+    monto_impuesto = models.IntegerField(default=0, verbose_name="Impuesto Único")
+    monto_faltante = models.IntegerField(default=0, verbose_name="Faltante Caja")
+
     detalle_json = models.JSONField(verbose_name="Detalle Completo JSON")
 
     class Meta:
@@ -187,19 +216,11 @@ class Vehiculo(models.Model):
 # 6. MÓDULO DE FLUJO POR TRABAJADOR (RENDICIÓN)
 # ==========================================================
 class RendicionDiaria(models.Model):
-    """
-    Almacena la rendición diaria de un trabajador.
-    """
-    trabajador = models.ForeignKey(Trabajador, on_delete=models.CASCADE, verbose_name="Trabajador")
+    trabajador = models.ForeignKey(Trabajador, on_delete=models.PROTECT, verbose_name="Trabajador")
     fecha = models.DateField(default=date.today)
-    
-    # Bodega donde se hizo el turno
     bodega = models.CharField(max_length=10, default='1221', verbose_name="Bodega del Turno")
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    # Bloqueo de registro
     cerrado = models.BooleanField(default=False, verbose_name="¿Rendición Cerrada?")
 
     # --- 1. DETALLE DE CILINDROS ---
@@ -222,10 +243,8 @@ class RendicionDiaria(models.Model):
     monto_vales = models.BigIntegerField(default=0, verbose_name="Vales/Prepago")
     monto_transbank = models.BigIntegerField(default=0, verbose_name="Transbank")
     
-    # --- GASTOS (MODIFICADO) ---
-    # Guardaremos la suma total en "gasto_total" para cálculos rápidos
+    # --- GASTOS ---
     gasto_total = models.IntegerField(default=0, verbose_name="Total Gastos")
-    # Guardaremos el detalle (Ej: '[{"monto":1000,"desc":"Agua"}, ...]') en este campo de texto
     detalle_gastos = models.TextField(default='[]', verbose_name="JSON Detalle Gastos")
 
     # Efectivo

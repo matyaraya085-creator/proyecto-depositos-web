@@ -42,6 +42,7 @@
                     <div class="meta-item text-muted">
                         <i class="far fa-clock"></i> 
                         Act: {{ lote.updated_at|date:"H:i" }}
+                        <span id="auto-save-status" style="margin-left: 10px; font-weight: bold; font-size: 0.8rem;"></span>
                     </div>
                 {% endif %}
             </div>
@@ -121,7 +122,7 @@
                         <tr>
                             <th style="padding: 8px 15px; text-align: left;">Trabajador</th>
                             <th style="padding: 8px; text-align: right;">Monto</th>
-                            {% if puede_editar %}<th style="width: 30px;"></th>{% endif %}
+                            {% if puede_editar %}<th style="width: 70px;"></th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -139,13 +140,22 @@
                                 ${{ aporte.monto }}
                             </td>
                             {% if puede_editar %}
-                                <td style="padding: 6px; text-align: center;">
-                                    <form action="{% url 'quitar_aportes_seleccion' lote.id %}" method="POST" style="margin: 0;">
+                                <td style="padding: 6px; text-align: center; white-space: nowrap;">
+                                    
+                                    <button type="button" 
+                                            onclick="editarAporte('{{ aporte.id }}', '{{ aporte.trabajador.id }}', '{{ aporte.monto }}', '{{ aporte.descripcion|escapejs }}')"
+                                            style="background: none; border: none; color: var(--lipi-blue); cursor: pointer; font-size: 0.9rem; margin-right: 5px;"
+                                            title="Editar Aporte">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+
+                                    <form action="{% url 'quitar_aportes_seleccion' lote.id %}" method="POST" style="display: inline; margin: 0;">
                                         {% csrf_token %}
                                         <input type="hidden" name="aporte_ids" value="{{ aporte.id }}">
                                         <button type="submit" 
                                                 onclick="return confirm('¿Eliminar aporte de {{ aporte.trabajador.nombre }}?')"
-                                                style="background: none; border: none; color: #ccc; cursor: pointer; font-size: 0.9rem;">
+                                                style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.9rem;"
+                                                title="Eliminar">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </form>
@@ -245,16 +255,16 @@
     <div style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 400px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
         
         <div style="padding: 12px 15px; background-color: var(--lipi-blue); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; font-size: 1.1rem;">Nuevo Aporte</h3>
+            <h3 style="margin: 0; font-size: 1.1rem;" id="modal-titulo">Nuevo Aporte</h3>
             <span onclick="cerrarModalAporte()" style="color: white; font-size: 24px; font-weight: bold; cursor: pointer;">&times;</span>
         </div>
 
         <div style="padding: 20px;">
-            <form action="{% url 'agregar_aporte' lote.id %}" method="POST" id="form-nuevo-aporte">
+            <form action="" method="POST" id="form-nuevo-aporte">
                 {% csrf_token %}
                 <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.9rem;">Trabajador:</label>
-                    <select name="trabajador" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <select name="trabajador" id="modal-input-trabajador" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                         <option value="" selected disabled>-- Seleccione --</option>
                         {% for t in trabajadores_disponibles %}
                             <option value="{{ t.id }}">{{ t.nombre }}</option>
@@ -265,15 +275,15 @@
                 </div>
                 <div style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.9rem;">Monto ($):</label>
-                    <input type="number" name="monto" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <input type="number" name="monto" id="modal-input-monto" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                 </div>
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.9rem;">Descripción:</label>
-                    <input type="text" name="descripcion" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <input type="text" name="descripcion" id="modal-input-descripcion" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                 </div>
                 <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
                     <button type="button" onclick="cerrarModalAporte()" style="background: #ccc; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: 600; font-size: 0.9rem;">Cancelar</button>
-                    <button type="submit" style="background: var(--lipi-blue); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">Guardar</button>
+                    <button type="submit" id="btn-submit-modal" style="background: var(--lipi-blue); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">Guardar</button>
                 </div>
             </form>
         </div>
@@ -281,6 +291,9 @@
 </div>
 
 <script>
+    // -------------------------------------------------------------------------
+    // 1. LÓGICA DE RENOMBRAR LOTE
+    // -------------------------------------------------------------------------
     function renombrarLote(idLote, nombreActual) {
         let nuevoNombre = prompt("Nombre o turno:", nombreActual);
         if (nuevoNombre !== null) {
@@ -291,11 +304,54 @@
         }
     }
 
+    // -------------------------------------------------------------------------
+    // 2. LÓGICA DEL MODAL (CREAR Y EDITAR)
+    // -------------------------------------------------------------------------
     var modal = document.getElementById("modal-aporte");
-    function abrirModalAporte() { modal.style.display = "block"; const s=document.querySelector('#form-nuevo-aporte select'); if(s) s.focus(); }
+    var formAporte = document.getElementById("form-nuevo-aporte");
+    
+    // AQUÍ ESTÁ EL ARREGLO:
+    // Generamos las URLs base con Django. Para la de editar, usamos '0' como marcador.
+    var urlAgregarBase = "{% url 'agregar_aporte' lote.id %}";
+    var urlEditarPlantilla = "{% url 'editar_aporte' 0 %}";
+
+    function abrirModalAporte() { 
+        // Modo Crear
+        modal.style.display = "block"; 
+        document.getElementById('modal-titulo').innerText = "Nuevo Aporte";
+        document.getElementById('btn-submit-modal').innerText = "Guardar";
+        formAporte.action = urlAgregarBase;
+        
+        // Limpiar inputs
+        document.getElementById('modal-input-trabajador').value = "";
+        document.getElementById('modal-input-monto').value = "";
+        document.getElementById('modal-input-descripcion').value = "";
+        
+        const s=document.querySelector('#form-nuevo-aporte select'); 
+        if(s) s.focus(); 
+    }
+
+    function editarAporte(idAporte, idTrabajador, monto, descripcion) {
+        // Modo Editar
+        modal.style.display = "block";
+        document.getElementById('modal-titulo').innerText = "Editar Aporte";
+        document.getElementById('btn-submit-modal').innerText = "Actualizar";
+        
+        // Reemplazamos el '0' por el ID real del aporte
+        formAporte.action = urlEditarPlantilla.replace('0', idAporte); 
+
+        // Rellenar datos
+        document.getElementById('modal-input-trabajador').value = idTrabajador;
+        document.getElementById('modal-input-monto').value = monto;
+        document.getElementById('modal-input-descripcion').value = descripcion;
+    }
+
     function cerrarModalAporte() { modal.style.display = "none"; }
     window.onclick = function(event) { if (event.target == modal) modal.style.display = "none"; }
     
+    // -------------------------------------------------------------------------
+    // 3. CÁLCULOS Y AUTO-GUARDADO
+    // -------------------------------------------------------------------------
     document.addEventListener('DOMContentLoaded', function() {
         function formatMoney(amount) { return '$' + parseInt(amount).toLocaleString('es-CL'); }
 
@@ -312,7 +368,53 @@
 
         const inputs = document.querySelectorAll('.input-cantidad');
         const inputCheque = document.getElementById('input-cheque');
-        
+        const statusSpan = document.getElementById('auto-save-status');
+
+        // --- SISTEMA DE AUTO GUARDADO ---
+        let timeoutGuardado = null;
+        const urlAutoSave = "{% url 'api_auto_guardar_arqueo' lote.id %}";
+
+        function autoGuardarDatos() {
+            if(statusSpan) {
+                statusSpan.style.color = '#e67e22'; // Naranja
+                statusSpan.innerText = "Guardando...";
+            }
+
+            const formArqueo = document.getElementById('form-arqueo');
+            const formData = new FormData(formArqueo);
+
+            fetch(urlAutoSave, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'ok') {
+                    if(statusSpan) {
+                        statusSpan.style.color = '#27ae60'; // Verde
+                        statusSpan.innerText = "Guardado ✓";
+                        setTimeout(() => { statusSpan.innerText = ""; }, 2000);
+                    }
+                } else {
+                    console.error("Error guardando:", data);
+                    if(statusSpan) statusSpan.innerText = "Error al guardar";
+                }
+            })
+            .catch(error => {
+                console.error('Error red:', error);
+                if(statusSpan) statusSpan.innerText = "Error red";
+            });
+        }
+
+        function triggerAutoGuardado() {
+            if(statusSpan) statusSpan.innerText = "...";
+            clearTimeout(timeoutGuardado);
+            // Guarda 0.8s después de dejar de escribir
+            timeoutGuardado = setTimeout(autoGuardarDatos, 800);
+        }
+
+        // --- CÁLCULOS VISUALES ---
         function calcularTodo() {
             let totalEfectivo = 0;
             inputs.forEach(input => {
@@ -347,8 +449,19 @@
                 textDiferencia.textContent = 'SOBRAN: ' + formatMoney(Math.abs(diferencia));
             }
         }
-        inputs.forEach(input => { input.addEventListener('input', calcularTodo); input.addEventListener('focus', function() { this.select(); }); });
-        if(inputCheque) { inputCheque.addEventListener('input', calcularTodo); inputCheque.addEventListener('focus', function() { this.select(); }); }
+
+        // Asignar eventos
+        inputs.forEach(input => { 
+            input.addEventListener('input', () => { calcularTodo(); triggerAutoGuardado(); }); 
+            input.addEventListener('focus', function() { this.select(); }); 
+        });
+
+        if(inputCheque) { 
+            inputCheque.addEventListener('input', () => { calcularTodo(); triggerAutoGuardado(); }); 
+            inputCheque.addEventListener('focus', function() { this.select(); }); 
+        }
+
+        // Calcular al inicio
         calcularTodo();
     });
 </script>

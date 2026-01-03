@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, Sum, Count, Case, When, IntegerField, F
-from django.urls import reverse  # <--- IMPORTANTE: Necesario para arreglar los links
+from django.urls import reverse
 from datetime import date, datetime
+from django.http import JsonResponse 
 import json
 import locale
 import calendar
@@ -93,8 +94,13 @@ def dashboard_bodega(request):
         bodega=bodega_id 
     ).select_related('trabajador').order_by('created_at')
 
+    # --- FILTRO APLICADO AQUÍ ---
+    # Solo mostramos trabajadores que pertenezcan a la bodega (o Ambos),
+    # que estén ACTIVOS y que tengan el FILTRO activado.
     trabajadores_disponibles = Trabajador.objects.filter(
-        Q(bodega_asignada=bodega_id) | Q(bodega_asignada='Ambos')
+        Q(bodega_asignada=bodega_id) | Q(bodega_asignada='Ambos'),
+        activo=True,            # <--- Solo trabajadores activos
+        filtro_trabajador=True  # <--- Solo habilitados para caja
     ).order_by('nombre')
 
     total_kg_dia = sum(r.total_kilos for r in rendiciones)
@@ -328,7 +334,13 @@ def reporte_mensual(request):
     trabajador_id = request.GET.get('trabajador_id')
     fecha_str = request.GET.get('fecha_seleccionada')
     
-    trabajadores = Trabajador.objects.all().order_by('nombre')
+    # --- FILTRO APLICADO AQUÍ ---
+    # Selector del reporte mensual: solo activos y habilitados
+    trabajadores = Trabajador.objects.filter(
+        activo=True,
+        filtro_trabajador=True
+    ).order_by('nombre')
+
     trabajador_seleccionado = None
     report_data = None
     
@@ -563,3 +575,79 @@ def configurar_comisiones(request):
             messages.error(request, f"Error al guardar: {e}")
 
     return render(request, 'gestion/caja_trabajador/config_comisiones.html', {'tarifas': tarifas})
+
+@login_required
+def api_auto_guardar_rendicion(request, rendicion_id):
+    """
+    Guarda automáticamente los datos de la rendición (Kilos, Platas y Gastos)
+    sin recargar la página.
+    """
+    if request.method == 'POST':
+        rendicion = get_object_or_404(RendicionDiaria, id=rendicion_id)
+        
+        # Validación de seguridad igual que en editar
+        if rendicion.cerrado and not request.user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Rendición cerrada'}, status=403)
+            
+        if CierreDiario.objects.filter(fecha=rendicion.fecha, bodega=rendicion.bodega).exists():
+             return JsonResponse({'status': 'error', 'message': 'Día cerrado globalmente'}, status=403)
+
+        try:
+            # --- 1. PROCESAR INVENTARIO (KILOS) ---
+            rendicion.gas_5kg = int(request.POST.get('gas_5kg') or 0)
+            rendicion.gas_11kg = int(request.POST.get('gas_11kg') or 0)
+            rendicion.gas_15kg = int(request.POST.get('gas_15kg') or 0)
+            rendicion.gas_45kg = int(request.POST.get('gas_45kg') or 0)
+            
+            rendicion.gasc_5kg = int(request.POST.get('gasc_5kg') or 0)
+            rendicion.gasc_15kg = int(request.POST.get('gasc_15kg') or 0)
+            rendicion.gas_ultra_15kg = int(request.POST.get('gas_ultra_15kg') or 0)
+            
+            rendicion.cilindros_defectuosos = int(request.POST.get('cilindros_defectuosos') or 0)
+            
+            # Recálculo de Kilos
+            rendicion.total_kilos = (rendicion.gas_5kg * 5) + \
+                                    (rendicion.gas_11kg * 11) + \
+                                    (rendicion.gas_15kg * 15) + \
+                                    (rendicion.gas_45kg * 45) + \
+                                    (rendicion.gasc_5kg * 5) + \
+                                    (rendicion.gasc_15kg * 15) + \
+                                    (rendicion.gas_ultra_15kg * 15)
+
+            # --- 2. PROCESAR CAJA Y GASTOS ---
+            rendicion.total_venta = int(request.POST.get('total_venta') or 0)
+            rendicion.monto_vales = int(request.POST.get('monto_vales') or 0)
+            rendicion.monto_transbank = int(request.POST.get('monto_transbank') or 0)
+            rendicion.monto_credito = int(request.POST.get('monto_credito') or 0) 
+            rendicion.efectivo_entregado = int(request.POST.get('efectivo_entregado') or 0)
+            
+            # JSON de Gastos
+            json_gastos = request.POST.get('detalle_gastos') or '[]'
+            rendicion.detalle_gastos = json_gastos 
+            
+            try:
+                lista_gastos = json.loads(json_gastos)
+                total_gastos_calculado = sum(int(item.get('monto', 0)) for item in lista_gastos)
+            except:
+                total_gastos_calculado = 0
+            
+            rendicion.gasto_total = total_gastos_calculado
+
+            # --- 3. CÁLCULO FINAL DIFERENCIA ---
+            rendicion.efectivo_esperado = rendicion.total_venta - (
+                rendicion.monto_vales + 
+                rendicion.monto_transbank + 
+                rendicion.monto_credito +
+                rendicion.gasto_total 
+            )
+            
+            rendicion.diferencia = rendicion.efectivo_entregado - rendicion.efectivo_esperado
+            
+            rendicion.save()
+            
+            return JsonResponse({'status': 'ok', 'message': 'Guardado'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+    return JsonResponse({'status': 'error'}, status=400)

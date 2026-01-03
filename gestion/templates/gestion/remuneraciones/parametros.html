@@ -1,101 +1,123 @@
 {% extends 'gestion/core/base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
+
+<style>
+    /* Estilo Personalizado Tabla Asignación (Púrpura) */
+    .tabla-asignacion thead {
+        background-color: #4a148c; /* Púrpura oscuro */
+        color: white;
+    }
+    .tabla-asignacion th {
+        border: 1px solid #6a1b9a;
+        vertical-align: middle;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+    }
+    .tabla-asignacion td {
+        vertical-align: middle;
+        font-weight: bold;
+        color: #4a148c;
+    }
+    .tabla-asignacion .requisito-renta {
+        font-weight: normal;
+        color: #333;
+        font-size: 0.9rem;
+    }
+    .card-indicator {
+        transition: transform 0.2s;
+    }
+    .card-indicator:hover {
+        transform: translateY(-5px);
+    }
+</style>
 
 <div class="container-fluid" style="max-width: 1200px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
         <div>
-            <h2 class="fw-bold mb-0">⚙️ Parámetros del Sistema</h2>
-            <p class="text-muted">Configuración de valores para el cálculo de sueldos</p>
+            <h2 class="fw-bold mb-0">⚙️ Parámetros de Remuneraciones</h2>
+            <p class="text-muted">Configuración centralizada de tasas y valores</p>
         </div>
-        <a href="{% url 'menu_remuneraciones' %}" class="btn btn-outline-secondary rounded-pill px-4">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
+        <div class="d-flex gap-2">
+            {% if db_vacia %}
+                <a href="{% url 'inicializar_parametros' %}" class="btn btn-danger rounded-pill shadow-sm animate__animated animate__pulse animate__infinite">
+                   <i class="fas fa-database me-2"></i> Inicializar DB
+                </a>
+            {% endif %}
+            <a href="{% url 'menu_remuneraciones' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
     </div>
 
-    {% if db_vacia %}
-    <div class="alert alert-danger shadow-sm d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h5 class="mb-1 fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Base de Datos de Parámetros Vacía</h5>
-            <p class="mb-0">Ejecuta la inicialización para cargar las AFP, Salud y Tramos con valores de referencia (ej. Fonasa 7.0%, AFP Modelo, Tramos 2023).</p>
-        </div>
-        <a href="{% url 'inicializar_parametros' %}" 
-           onclick="return confirm('¿Confirmas que deseas inicializar los parámetros? Esto insertará los valores por defecto de AFP, Salud y Tramos en la base de datos.')"
-           class="btn btn-danger btn-lg rounded-pill fw-bold" style="white-space: nowrap;">
-           <i class="fas fa-database me-2"></i> Inicializar
-        </a>
-    </div>
-    {% endif %}
-    
     <div class="row">
         
         <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-warning text-dark py-3">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2"></i>Indicadores Económicos</h5>
+            <div class="card shadow-sm border-0 h-100 card-indicator">
+                <div class="card-header bg-warning text-dark py-2 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-percentage me-2"></i>Indicadores</h5>
+                    <button class="btn btn-sm btn-dark rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditarIndicadores">
+                        <i class="fas fa-edit me-1"></i> Editar
+                    </button>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{% url 'guardar_indicadores' %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-muted">SUELDO MÍNIMO</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" name="sueldo_minimo" class="form-control fw-bold" value="{{ config.sueldo_minimo }}">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-muted">VALOR UF (Previsional)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" name="valor_uf" class="form-control fw-bold" value="{{ config.valor_uf }}">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-muted">VALOR UTM</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" name="valor_utm" class="form-control fw-bold" value="{{ config.valor_utm }}">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-muted">% GRATIFICACIÓN LEGAL</label>
-                            <div class="input-group">
-                                <input type="number" name="gratificacion_legal_pct" class="form-control fw-bold" value="{{ config.gratificacion_legal_pct }}">
-                                <span class="input-group-text">%</span>
-                            </div>
-                        </div>
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-warning text-dark fw-bold rounded-pill">Guardar Indicadores</button>
-                        </div>
-                    </form>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light text-uppercase small text-muted">
+                            <tr>
+                                <th class="ps-3 py-2">Concepto</th>
+                                <th class="text-end pe-3 py-2">Valor Actual</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-3 py-3">
+                                    <span class="fw-bold text-dark d-block">Gratificación Legal</span>
+                                    <small class="text-muted">Tope mensual 4.75 IMM</small>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <span class="badge bg-warning text-dark fs-6">{{ config.gratificacion_legal_pct }}%</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-3">
+                                    <span class="fw-bold text-dark d-block">Seguro Cesantía</span>
+                                    <small class="text-muted">Aporte del trabajador</small>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <span class="badge bg-primary fs-6">{{ config.seguro_cesantia_pct }}%</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white small text-muted text-center border-0">
+                    Utilizados en el cálculo automático.
                 </div>
             </div>
         </div>
 
-       <div class="col-lg-4 mb-4">
+        <div class="col-lg-4 mb-4">
             <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h5 class="mb-0 fw-bold text-primary">Administradoras de Fondos (AFP)</h5>
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                    <h6 class="mb-0 fw-bold text-primary">AFP</h6>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#modalCrearEntidad" onclick="setCrearModal('afp')">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
-                <div class="card-body p-0">
-                    <table class="table table-sm table-hover mb-0 align-middle">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="ps-3">Nombre</th>
-                                <th class="text-center">Tasa (%)</th>
-                                <th class="text-end pe-3">Acción</th>
-                            </tr>
-                        </thead>
+                <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0 align-middle small">
                         <tbody>
                             {% for afp in afps %}
                             <tr>
                                 <td class="ps-3">{{ afp.nombre }}</td>
-                                <td class="text-center fw-bold">{{ afp.tasa|floatformat:2 }}%</td>
-                                <td class="text-end pe-3">
-                                    <a href="{% url 'editar_tasa_previsional' modelo='afp' nombre=afp.nombre %}" class="text-muted" title="Editar Tasa"><i class="fas fa-edit"></i></a>
+                                <td class="text-end fw-bold">{{ afp.tasa|floatformat:2 }}%</td>
+                                <td class="text-end pe-3" style="width: 40px;">
+                                    <button class="btn btn-link text-muted p-0" onclick="abrirModalEditar('afp', '{{ afp.nombre }}', '{{ afp.tasa|stringformat:'f' }}')">
+                                        <i class="fas fa-pen small"></i>
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -105,25 +127,23 @@
             </div>
 
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h5 class="mb-0 fw-bold text-success">Instituciones de Salud</h5>
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                    <h6 class="mb-0 fw-bold text-success">Instituciones Salud</h6>
+                    <button class="btn btn-sm btn-outline-success rounded-pill" data-bs-toggle="modal" data-bs-target="#modalCrearEntidad" onclick="setCrearModal('salud')">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
-                <div class="card-body p-0">
-                    <table class="table table-sm table-hover mb-0 align-middle">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="ps-3">Nombre</th>
-                                <th class="text-center">Tasa (%)</th>
-                                <th class="text-end pe-3">Acción</th>
-                            </tr>
-                        </thead>
+                <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0 align-middle small">
                         <tbody>
                             {% for salud_inst in salud %}
                             <tr>
                                 <td class="ps-3">{{ salud_inst.nombre }}</td>
-                                <td class="text-center fw-bold">{{ salud_inst.tasa|floatformat:1 }}{% if salud_inst.nombre == 'Isapre' %}+{% else %}%{% endif %}</td>
-                                <td class="text-end pe-3">
-                                    <a href="{% url 'editar_tasa_previsional' modelo='salud' nombre=salud_inst.nombre %}" class="text-muted" title="Editar Tasa"><i class="fas fa-edit"></i></a>
+                                <td class="text-end fw-bold">{{ salud_inst.tasa|floatformat:2 }}%</td>
+                                <td class="text-end pe-3" style="width: 40px;">
+                                    <button class="btn btn-link text-muted p-0" onclick="abrirModalEditar('salud', '{{ salud_inst.nombre }}', '{{ salud_inst.tasa|stringformat:'f' }}')">
+                                        <i class="fas fa-pen small"></i>
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -134,41 +154,228 @@
         </div>
 
         <div class="col-lg-4 mb-4">
-    <div class="card shadow-sm border-0 h-100">
-        <div class="card-header bg-info text-white py-3">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-child me-2"></i>Asignación Familiar</h5>
+            <div class="card shadow border-0 h-100">
+                <div class="card-header py-3 text-white d-flex justify-content-between align-items-center" style="background-color: #4a148c;">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-child me-2"></i>Asignación Familiar</h5>
+                    <button class="btn btn-sm btn-light text-purple fw-bold rounded-pill" data-bs-toggle="modal" data-bs-target="#modalEditarTramos">
+                        <i class="fas fa-edit me-1"></i> Editar
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0 tabla-asignacion text-center">
+                            <thead>
+                                <tr>
+                                    <th>Tramo</th>
+                                    <th>Monto</th>
+                                    <th>Requisito de Renta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tramo in tramos %}
+                                <tr>
+                                    <td class="bg-light">{{ tramo.tramo }}</td>
+                                    <td>
+                                        {% if tramo.monto_por_carga > 0 %}
+                                            ${{ tramo.monto_por_carga|intcomma }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="requisito-renta text-start ps-3">
+                                        {% if forloop.first %}
+                                            Renta &le; ${{ tramo.ingreso_tope|intcomma }}
+                                        {% elif forloop.last %}
+                                            Renta > ${{ tramos.2.ingreso_tope|intcomma }}
+                                        {% else %}
+                                            {% with prev=tramos|slice:forloop.counter0|last %} 
+                                                Renta > ${{ prev.ingreso_tope|intcomma }} <br> &le; ${{ tramo.ingreso_tope|intcomma }}
+                                            {% endwith %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white small text-muted text-center border-0">
+                    Valores vigentes según última actualización.
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead class="bg-light">
-                        <tr class="small text-uppercase">
-                            <th class="ps-3">Tramo</th>
-                            <th>Renta Tope</th>
-                            <th class="text-end pe-3">Monto ($)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tramo in tramos %}
-                        <tr>
-                            <td class="ps-3 fw-bold">{{ tramo.tramo }}</td>
-                            <td>{% if tramo.tramo == 'D' %}> {% endif %}${{ tramo.ingreso_tope|floatformat:0 }}</td>
-                            <td class="text-end pe-3 fw-bold">${{ tramo.monto_por_carga|floatformat:0 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="p-3 text-center">
-                <a href="{% url 'editar_tramos_asignacion' %}" class="btn btn-sm btn-outline-info rounded-pill">
-    Editar Tramos
-</a>
-            </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarIndicadores" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{% url 'guardar_indicadores' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-percentage me-2"></i>Editar Indicadores</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Gratificación Legal</label>
+                        <div class="input-group input-group-lg">
+                            <input type="number" step="0.01" name="gratificacion_legal_pct" class="form-control fw-bold text-center" value="{{ config.gratificacion_legal_pct }}" required>
+                            <span class="input-group-text fw-bold">%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase text-muted">Seguro de Cesantía (Trabajador)</label>
+                        <div class="input-group input-group-lg">
+                            <input type="number" step="0.01" name="seguro_cesantia_pct" class="form-control fw-bold text-center" value="{{ config.seguro_cesantia_pct }}" required>
+                            <span class="input-group-text fw-bold">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="modalCrearEntidad" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{% url 'crear_entidad_previsional' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="tituloModalCrear">Agregar Nueva</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="tipo_entidad" id="inputTipoEntidad">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: AFP Nueva" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tasa (%)</label>
+                        <input type="number" step="0.01" name="tasa" class="form-control" placeholder="Ej: 11.45" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalEditarEntidad" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="formEditarEntidad" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Editar Tasa: <span id="nombreEntidadEditar"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="text-muted mb-3">Ingrese el nuevo porcentaje para esta institución.</p>
+                    <div class="input-group input-group-lg">
+                        <input type="number" step="0.01" name="tasa" id="inputTasaEditar" class="form-control text-center fw-bold text-primary" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Actualizar Tasa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarTramos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{% url 'editar_tramos_asignacion' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header text-white" style="background-color: #4a148c;">
+                    <h5 class="modal-title fw-bold">Editar Tramos Asignación Familiar</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <table class="table table-bordered align-middle">
+                        <thead class="bg-light text-center">
+                            <tr>
+                                <th>Tramo</th>
+                                <th>Renta Tope ($)</th>
+                                <th>Monto por Carga ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tramo in tramos %}
+                            <tr>
+                                <td class="text-center fw-bold bg-light">{{ tramo.tramo }}</td>
+                                <td>
+                                    <input type="number" name="tope_{{ tramo.tramo }}" class="form-control text-end" value="{{ tramo.ingreso_tope }}" {% if tramo.tramo == 'D' %}readonly{% endif %}>
+                                </td>
+                                <td>
+                                    <input type="number" name="monto_{{ tramo.tramo }}" class="form-control text-end fw-bold text-purple" value="{{ tramo.monto_por_carga }}" style="color: #4a148c;">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="alert alert-info small mb-0">
+                        <i class="fas fa-info-circle me-1"></i> El Tramo D es el tramo "Sin Pago", por lo que suele tener una renta tope muy alta y monto 0.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold" style="background-color: #4a148c; border:none;">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Configurar Modal CREAR (Saber si es AFP o Salud)
+    function setCrearModal(tipo) {
+        document.getElementById('inputTipoEntidad').value = tipo;
+        const titulo = document.getElementById('tituloModalCrear');
+        if(tipo === 'afp') {
+            titulo.innerText = "Nueva AFP";
+            titulo.className = "modal-title fw-bold text-primary";
+        } else {
+            titulo.innerText = "Nueva Institución de Salud";
+            titulo.className = "modal-title fw-bold text-success";
+        }
+    }
+
+    // 2. Configurar Modal EDITAR (Rellenar datos y action del form)
+    function abrirModalEditar(modelo, nombre, tasa) {
+        // Formatear tasa (cambiar coma por punto si viene en string de python)
+        const tasaClean = tasa.replace(',', '.');
+        
+        document.getElementById('nombreEntidadEditar').innerText = nombre;
+        document.getElementById('inputTasaEditar').value = tasaClean;
+        
+        // Construir la URL dinámicamente
+        // Nota: Django URL pattern: /remuneraciones/tasa/<str:modelo>/<str:nombre>/editar/
+        // Usamos un placeholder y lo reemplazamos
+        const baseUrl = "{% url 'editar_tasa_previsional' modelo='PLACEHOLDER_MODEL' nombre='PLACEHOLDER_NAME' %}";
+        const finalUrl = baseUrl.replace('PLACEHOLDER_MODEL', modelo).replace('PLACEHOLDER_NAME', nombre);
+        
+        document.getElementById('formEditarEntidad').action = finalUrl;
+
+        // Abrir Modal
+        var myModal = new bootstrap.Modal(document.getElementById('modalEditarEntidad'));
+        myModal.show();
+    }
+</script>
 
 {% endblock %}

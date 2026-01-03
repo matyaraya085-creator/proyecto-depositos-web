@@ -5,17 +5,14 @@
 
 <div class="container-fluid" style="max-width: 1000px;">
 
-    <div class="d-flex justify-content-between align-items-center mb-4 mt-4 d-print-none">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
         <div>
             <h2 class="fw-bold mb-0">📄 Detalle de Liquidación</h2>
-            <p class="text-muted">Vista previa antes de firmar</p>
+            <p class="text-muted">Revisión final de montos</p>
         </div>
         <div class="d-flex gap-2">
-            <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                <i class="fas fa-print me-2"></i> Imprimir / PDF
-            </button>
             <a href="{% url 'nomina_mensual' %}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="fas fa-arrow-left"></i> Volver
+                <i class="fas fa-arrow-left"></i> Volver a Nómina
             </a>
         </div>
     </div>
@@ -27,7 +24,6 @@
                 <div class="col-8">
                     <h4 class="fw-bold text-uppercase">Liquidación de Sueldo</h4>
                     <p class="mb-0 small text-muted">Servicios Logísticos Celestina Araya SPA</p>
-                    <p class="mb-0 small text-muted">RUT: 76.XXX.XXX-X</p>
                     <p class="mb-0 small text-muted">Ovalle, Coquimbo</p>
                 </div>
                 <div class="col-4 text-end">
@@ -47,7 +43,7 @@
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">RUT:</td>
-                            <td class="text-dark">{{ detalle.rut|default:'N/A' }}</td>
+                            <td class="text-dark">{{ rut_fmt }}</td>
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">Cargo:</td>
@@ -67,7 +63,7 @@
                         </tr>
                         <tr>
                             <td class="text-secondary fw-bold">Centro Costo:</td>
-                            <td class="text-dark">{{ t.get_bodega_asignada_display }}</td>
+                            <td class="text-dark">{{ bodega_real }}</td>
                         </tr>
                     </table>
                 </div>
@@ -77,86 +73,211 @@
                 <table class="table table-bordered align-middle">
                     <thead class="bg-light text-center small text-uppercase">
                         <tr>
-                            <th style="width: 50%;">Detalle (Haberes y Descuentos)</th>
-                            <th style="width: 25%;">Haberes ($)</th>
-                            <th style="width: 25%;">Descuentos ($)</th>
+                            <th style="width: 50%;">Detalle</th>
+                            <th style="width: 25%;">Debe ($)</th>
+                            <th style="width: 25%;">Haber ($)</th>
                         </tr>
                     </thead>
                     <tbody>
+                        
                         <tr>
-                            <td>Sueldo Base ({{ detalle.dias_trabajados }} días)</td>
-                            <td class="text-end">{{ detalle.sueldo_base|floatformat:0 }}</td>
-                            <td class="bg-light"></td>
+                            <td colspan="3" class="fw-bold bg-white text-uppercase text-primary pt-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-plus-circle me-1"></i> HABERES IMPONIBLES
+                            </td>
                         </tr>
+
                         <tr>
-                            <td>Gratificación Legal ({{ detalle.gratificacion|floatformat:0 }})</td>
-                            <td class="text-end">{{ detalle.gratificacion|floatformat:0 }}</td>
+                            <td>Sueldo Base (${{ detalle.sueldo_base_original|floatformat:0 }})</td>
                             <td class="bg-light"></td>
+                            <td class="text-end">{{ detalle.sueldo_base_proporcional|floatformat:0 }}</td>
                         </tr>
-                        {% if detalle.horas_extras > 0 %}
+                        
                         <tr>
                             <td>Horas Extras ({{ detalle.horas_extras|floatformat:1 }} hrs)</td>
+                            <td class="bg-light"></td>
                             <td class="text-end">{{ detalle.monto_horas_extras|floatformat:0 }}</td>
-                            <td class="bg-light"></td>
                         </tr>
-                        {% endif %}
-                        {% if detalle.monto_bonos > 0 %}
+
+                        {% for item in detalle.lista_haberes %}
                         <tr>
-                            <td>Otros Haberes (Bonos no imponibles)</td>
-                            <td class="text-end">{{ detalle.monto_bonos|floatformat:0 }}</td>
+                            <td>{{ item.desc }}</td>
                             <td class="bg-light"></td>
+                            <td class="text-end">{{ item.monto|floatformat:0 }}</td>
                         </tr>
-                        {% endif %}
-                        
-                        <tr class="table-info small text-uppercase">
-                            <td>TOTAL HABERES IMPONIBLES Y NO IMPONIBLES</td>
-                            <td class="text-end fw-bold">{{ total_haberes_brutos|floatformat:0 }}</td>
+                        {% endfor %}
+
+                        <tr>
+                            <td>Gratificación Legal (25%)</td>
                             <td class="bg-light"></td>
+                            <td class="text-end">{{ detalle.gratificacion|floatformat:0 }}</td>
+                        </tr>
+
+                        <tr class="table-secondary fw-bold">
+                            <td class="text-uppercase text-end">Total Imponible</td>
+                            <td class="bg-secondary bg-opacity-10"></td>
+                            <td class="text-end">{{ detalle.sueldo_imponible|floatformat:0 }}</td>
+                        </tr>
+
+
+                        <tr>
+                            <td colspan="3" class="fw-bold bg-white text-uppercase text-info pt-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-gift me-1"></i> OTROS HABERES (NO IMP.)
+                            </td>
+                        </tr>
+
+                        {% for item in detalle.lista_bonos %}
+                        <tr>
+                            <td>{{ item.desc }}</td>
+                            <td class="bg-light"></td>
+                            <td class="text-end">{{ item.monto|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+
+                        <tr class="table-secondary fw-bold">
+                            <td class="text-uppercase text-end">Total No Imponible</td>
+                            <td class="bg-secondary bg-opacity-10"></td>
+                            <td class="text-end">{{ detalle.monto_otros_haberes_total|floatformat:0 }}</td>
+                        </tr>
+
+
+                        <tr>
+                            <td colspan="3" class="fw-bold bg-white text-uppercase text-primary pt-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-child me-1"></i> ASIGNACIONES FAMILIARES
+                            </td>
                         </tr>
 
                         {% if detalle.asignacion_familiar > 0 %}
-                        <tr class="table-success small text-uppercase">
-                            <td>Asignación Familiar ({{ t.cargas_familiares|default:0 }} cargas)</td>
-                            <td class="text-end fw-bold">{{ detalle.asignacion_familiar|floatformat:0 }}</td>
+                        <tr>
+                            <td>
+                                {{ t.cargas_familiares }} Cargas Familiares Tramo {{ detalle.tramo_letra|default:"?" }} $ {{ detalle.tramo_monto_unitario|floatformat:0|default:"0" }}.-
+                            </td>
                             <td class="bg-light"></td>
+                            <td class="text-end">{{ detalle.asignacion_familiar|floatformat:0 }}</td>
                         </tr>
                         {% endif %}
+
+                        {% for item in detalle.lista_asignaciones %}
+                        <tr>
+                            <td>{{ item.desc }}</td>
+                            <td class="bg-light"></td>
+                            <td class="text-end">{{ item.monto|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                        
+                        <tr class="table-secondary fw-bold">
+                            <td class="text-uppercase text-end">Total Asignaciones</td>
+                            <td class="bg-secondary bg-opacity-10"></td>
+                            <td class="text-end">{{ detalle.monto_asignaciones_total|floatformat:0 }}</td>
+                        </tr>
+
+
+                        <tr>
+                            <td colspan="3" class="fw-bold bg-white text-uppercase text-danger pt-3" style="font-size: 0.85rem;">
+                                <i class="fas fa-minus-circle me-1"></i> DESCUENTOS
+                            </td>
+                        </tr>
 
                         <tr>
                             <td>Cotización AFP ({{ detalle.afp_nombre }} - {{ detalle.afp_tasa|floatformat:2 }}%)</td>
-                            <td class="bg-light"></td>
                             <td class="text-end text-danger">{{ detalle.monto_afp|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
                         </tr>
                         <tr>
-                            <td>Cotización Salud ({{ detalle.salud_nombre }} - {{ detalle.salud_tasa|floatformat:1 }}%)</td>
-                            <td class="bg-light"></td>
+                            <td>Cotización Salud ({{ detalle.salud_nombre }} - {{ detalle.salud_tasa|floatformat:2 }}%)</td>
                             <td class="text-end text-danger">{{ detalle.monto_salud|floatformat:0 }}</td>
-                        </tr>
-                         <tr>
-                            <td>Seguro Cesantía ({{ detalle.monto_seguro_cesantia|floatformat:0 }})</td>
                             <td class="bg-light"></td>
-                            <td class="text-end text-danger">{{ detalle.monto_seguro_cesantia|floatformat:0 }}</td>
                         </tr>
+                        <tr>
+                            <td>
+                                Seguro Cesantía
+                                {% if detalle.cumplio_11_anos %}
+                                <span class="small text-success fw-bold">(cumplió 11 años)</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-danger">{{ detalle.monto_seguro_cesantia|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
+                        </tr>
+
+                        {% if detalle.monto_impuesto > 0 %}
+                            <tr class="small text-muted fst-italic bg-white">
+                                <td class="ps-4">Afecto Impto. Único (Base Tributable)</td>
+                                <td class="text-end">{{ detalle.afecto_impuesto|floatformat:0 }}</td>
+                                <td class="bg-light"></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Impuesto Único a Pagar</td>
+                                <td class="text-end text-danger fw-bold">{{ detalle.monto_impuesto|floatformat:0 }}</td>
+                                <td class="bg-light"></td>
+                            </tr>
+                        {% endif %}
+
                         {% if detalle.monto_anticipo > 0 %}
                         <tr>
                             <td>Anticipo de Sueldo</td>
-                            <td class="bg-light"></td>
                             <td class="text-end text-danger">{{ detalle.monto_anticipo|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
                         </tr>
                         {% endif %}
 
-                        <tr class="fw-bold bg-light">
-                            <td class="text-end">TOTALES</td>
-                            <td class="text-end">{{ liquidacion.total_haberes|floatformat:0 }}</td>
-                            <td class="text-end">{{ liquidacion.total_descuentos|floatformat:0 }}</td>
+                        {% for item in detalle.lista_descuentos %}
+                        <tr>
+                            <td>{{ item.desc }}</td>
+                            <td class="text-end text-danger">{{ item.monto|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
                         </tr>
+                        {% endfor %}
+
+                        {% if detalle.monto_faltante > 0 %}
+                        <tr>
+                            <td class="text-danger fw-bold">
+                                Faltante de Caja ({{ periodo_str }})
+                                <br><span class="small text-muted fw-normal">Calc: ${{ detalle.faltante_automatico_original }} - Abono: ${{ detalle.abono_faltante }}</span>
+                            </td>
+                            <td class="text-end text-danger fw-bold">{{ detalle.monto_faltante|floatformat:0 }}</td>
+                            <td class="bg-light"></td>
+                        </tr>
+                        {% endif %}
+
+                        <tr class="table-secondary fw-bold text-danger">
+                            <td class="text-uppercase text-end">Total Descuentos</td>
+                            <td class="text-end">{{ liquidacion.total_descuentos|floatformat:0 }}</td>
+                            <td class="bg-secondary bg-opacity-10"></td>
+                        </tr>
+
+
+                        <tr class="table-secondary fw-bold text-dark border-top border-dark">
+                            <td class="text-uppercase text-end">Total Haberes</td>
+                            <td class="bg-secondary bg-opacity-10"></td>
+                            <td class="text-end">{{ liquidacion.total_haberes|floatformat:0 }}</td>
+                        </tr>
+
                     </tbody>
                 </table>
             </div>
 
-            <div class="row justify-content-end mb-5">
-                <div class="col-md-6 col-8">
+            <div class="row justify-content-end mb-4">
+                <div class="col-md-7 col-12">
                     <div class="bg-dark text-white p-4 rounded shadow-sm d-flex justify-content-between align-items-center">
                         <div>
                             <span class="d-block text-uppercase small opacity-75">Líquido a Pagar</span>
-                            <span class="
+                            <span class="d-block display-4 fw-bold">${{ liquidacion.sueldo_liquido|floatformat:0 }}</span>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-3x opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 col-md-8 mx-auto mt-5">
+                <a href="{% url 'vista_excel_simulacion' liquidacion.id %}" class="btn btn-success btn-lg rounded-pill shadow py-3">
+                    <i class="fas fa-file-excel me-2 fa-lg"></i> CONFIRMAR DATOS Y EXPORTAR A EXCEL
+                </a>
+                <p class="text-center text-muted small mt-2">
+                    Al exportar, se generará el archivo final para contabilidad.
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from datetime import date, datetime
 import locale
+import json
 from gestion.models import Trabajador, DepositoDiario, DepositoAporte, DepositoDesglose, BODEGA_FILTRO_CHOICES
 from django.db.models import Max, Q, Sum
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -286,14 +287,16 @@ def editar_lote(request, lote_id):
         lote.save() 
         return redirect('editar_lote', lote_id=lote.id)
 
-    # --- LÓGICA DE FILTRADO DE TRABAJADORES ---
+    # --- LÓGICA DE FILTRADO DE TRABAJADORES (MODIFICADA) ---
     if 'Manuel' in lote.bodega_nombre: 
         filtro_bodega = '1221'  
     else:
         filtro_bodega = '1225'  
         
     trabajadores_disponibles = Trabajador.objects.filter(
-        Q(bodega_asignada=filtro_bodega) | Q(bodega_asignada='Ambos')
+        Q(bodega_asignada=filtro_bodega) | Q(bodega_asignada='Ambos'),
+        activo=True,              # SOLO ACTIVOS
+        filtro_trabajador=True    # SOLO CON FILTRO HABILITADO
     ).order_by('nombre')
     # ---------------------------------------------------
 
@@ -477,3 +480,97 @@ def renombrar_lote(request, lote_id):
         return redirect('editar_lote', lote_id=lote.id)
     
     return redirect('home')
+
+# --- NUEVAS FUNCIONALIDADES: EDICIÓN Y AUTO-GUARDADO ---
+
+@login_required
+def editar_aporte(request, aporte_id):
+    """
+    Vista para editar un aporte existente.
+    """
+    aporte = get_object_or_404(DepositoAporte, id=aporte_id)
+    lote = aporte.deposito
+    
+    if lote.cerrado and not request.user.is_superuser:
+        return redirect('editar_lote', lote_id=lote.id)
+
+    if request.method == 'POST':
+        trabajador_id = request.POST.get('trabajador')
+        monto = request.POST.get('monto')
+        descripcion = request.POST.get('descripcion', '')
+
+        if trabajador_id and monto:
+            # 1. Restar el monto antiguo del total del lote
+            lote.total_aportes -= aporte.monto
+            
+            # 2. Actualizar el aporte
+            aporte.trabajador_id = trabajador_id
+            aporte.monto = int(monto)
+            aporte.descripcion = descripcion
+            aporte.save()
+            
+            # 3. Sumar el nuevo monto al total del lote
+            lote.total_aportes += aporte.monto
+            
+            # 4. Recalcular diferencias
+            total_desglose_general = lote.total_desglose + lote.total_cheques
+            lote.diferencia = lote.total_aportes - total_desglose_general
+            lote.save()
+
+    return redirect('editar_lote', lote_id=lote.id)
+
+@login_required
+def api_auto_guardar_arqueo(request, lote_id):
+    """
+    Vista API para guardar el arqueo (lado derecho) automáticamente mediante AJAX
+    sin recargar la página.
+    """
+    if request.method == 'POST':
+        lote = get_object_or_404(DepositoDiario, id=lote_id)
+        
+        if lote.cerrado and not request.user.is_superuser:
+            return JsonResponse({'status': 'error', 'message': 'Lote cerrado'}, status=403)
+
+        denominaciones = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10]
+        
+        # Mapa de texto para guardar en BD (puedes ajustar si tus textos difieren)
+        mapa_textos = {
+            20000: "$20.000", 10000: "$10.000", 5000: "$5.000", 2000: "$2.000",
+            1000: "$1.000", 500: "$500", 100: "$100", 50: "$50", 10: "$10"
+        }
+
+        total_desglose_efectivo = 0
+        
+        # Borramos desglose anterior (estrategia simple para asegurar consistencia)
+        lote.desglose.all().delete()
+        
+        for valor in denominaciones:
+            cantidad_str = request.POST.get(f"cant_{valor}")
+            cantidad = int(cantidad_str) if cantidad_str else 0
+            
+            if cantidad > 0:
+                total_denominacion = cantidad * valor
+                total_desglose_efectivo += total_denominacion
+                
+                DepositoDesglose.objects.create(
+                    deposito=lote,
+                    denominacion=mapa_textos.get(valor, f"${valor}"),
+                    valor_unitario=valor,
+                    cantidad=cantidad,
+                    total_denominacion=total_denominacion
+                )
+        
+        cheque_str = request.POST.get('cant_cheque', '0')
+        cheque_monto = int(cheque_str) if cheque_str else 0
+        
+        lote.total_desglose = total_desglose_efectivo
+        lote.total_cheques = cheque_monto
+        
+        # Recalcular diferencia
+        total_desglose_general = total_desglose_efectivo + cheque_monto
+        lote.diferencia = lote.total_aportes - total_desglose_general
+        lote.save()
+        
+        return JsonResponse({'status': 'ok', 'message': 'Guardado'})
+    
+    return JsonResponse({'status': 'error'}, status=400)
