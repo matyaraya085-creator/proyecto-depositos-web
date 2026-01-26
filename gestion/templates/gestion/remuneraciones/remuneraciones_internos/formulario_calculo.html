@@ -1,0 +1,569 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<style>
+    :root {
+        --lipi-blue: #0033A0; /* Ajusta según tu branding */
+        --lipi-yellow: #FFD100;
+        --bg-light: #f8f9fa;
+    }
+
+    .form-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-bottom: 100px; /* Espacio para el footer flotante */
+    }
+
+    .card-section {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        margin-bottom: 25px;
+        overflow: hidden;
+        transition: transform 0.2s ease;
+    }
+    
+    .card-section:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    .card-header-custom {
+        background-color: white;
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-title {
+        font-weight: 700;
+        font-size: 1rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btn-add {
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .input-clean {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-weight: 500;
+    }
+    .input-clean:focus {
+        border-color: var(--lipi-blue);
+        box-shadow: 0 0 0 3px rgba(0, 51, 160, 0.1);
+    }
+
+    .input-money {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+    }
+
+    /* Footer flotante para acciones */
+    .sticky-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: white;
+        border-top: 1px solid #ddd;
+        padding: 15px 30px;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        z-index: 1000;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .total-badge {
+        font-size: 0.9rem;
+        color: #666;
+        margin-right: 10px;
+    }
+    .total-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: var(--lipi-blue);
+    }
+
+    .delete-btn {
+        opacity: 0.4;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+    .delete-btn:hover { opacity: 1; color: #dc3545; }
+
+    /* Colores temáticos */
+    .theme-blue .section-title i { color: var(--lipi-blue); }
+    .theme-green .section-title i { color: #28a745; }
+    .theme-orange .section-title i { color: #fd7e14; }
+    .theme-red .section-title i { color: #dc3545; }
+    .theme-purple .section-title i { color: #6f42c1; }
+
+</style>
+
+<div class="container-fluid form-container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">🧮 Cálculo de Remuneración</h2>
+            <div class="d-flex align-items-center text-muted gap-3">
+                <span><i class="fas fa-user me-1"></i> {{ trabajador.nombre }}</span>
+                <span>|</span>
+                <span><i class="fas fa-calendar me-1"></i> {{ periodo_str }}</span>
+            </div>
+        </div>
+        <a href="{% url 'nomina_mensual' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-times me-2"></i> Cancelar
+        </a>
+    </div>
+
+    <form method="POST" id="formCalculo">
+        {% csrf_token %}
+        
+        <input type="hidden" name="detalle_haberes" id="inputHaberes" value="{{ initial.json_haberes }}">
+        <input type="hidden" name="detalle_asignaciones" id="inputAsignaciones" value="{{ initial.json_asignaciones }}">
+        <input type="hidden" name="detalle_bonos" id="inputBonos" value="{{ initial.json_bonos }}">
+        <input type="hidden" name="detalle_descuentos_legales" id="inputDescuentosLegales" value="{{ initial.json_descuentos_legales }}">
+        <input type="hidden" name="detalle_descuentos" id="inputDescuentos" value="{{ initial.json_descuentos }}">
+
+        <input type="hidden" id="base_sueldo" value="{{ trabajador.sueldo_base }}">
+        <input type="hidden" id="valor_hora" value="{{ trabajador.valor_hora_extra }}">
+        <input type="hidden" id="tope_gratificacion" value="{{ tope_grat_anual|default:0 }}">
+
+        <div class="row">
+            
+            <div class="col-lg-6">
+                
+                <div class="card card-section theme-blue">
+                    <div class="card-header-custom">
+                        <h5 class="section-title"><i class="fas fa-clock"></i> 1. Tiempo Trabajado</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="small text-muted fw-bold text-uppercase">Días Trabajados</label>
+                                <div class="input-group">
+                                    <input type="number" id="inputDias" name="dias" class="form-control input-clean fw-bold text-center" value="{{ initial.dias }}" min="0" max="30">
+                                    <span class="input-group-text bg-light text-muted">días</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="small text-muted fw-bold text-uppercase">Horas Extras</label>
+                                <div class="input-group">
+                                    <input type="number" id="inputHoras" name="horas_extras" class="form-control input-clean fw-bold text-center" value="{{ initial.horas_extras }}" min="0" step="0.5">
+                                    <span class="input-group-text bg-light text-muted">hrs</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-section theme-green">
+                    <div class="card-header-custom">
+                        <h5 class="section-title"><i class="fas fa-plus-circle"></i> 2. Haberes (Imponibles)</h5>
+                        <button type="button" class="btn btn-add btn-outline-success" onclick="agregarItem('haberes')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body bg-light">
+                        <div id="container-haberes"></div>
+                        <div class="text-end mt-3 pt-2 border-top">
+                            <small class="fw-bold text-success text-uppercase">Subtotal Haberes: <span id="total-haberes" class="fs-6 ms-2">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-section theme-purple">
+                    <div class="card-header-custom">
+                        <h5 class="section-title"><i class="fas fa-gift"></i> 3. Otros Haberes (No Imp.)</h5>
+                        <button type="button" class="btn btn-add btn-outline-primary" style="color: #6f42c1; border-color: #6f42c1;" onclick="agregarItem('bonos')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body bg-light">
+                        <div id="container-bonos"></div>
+                        <div class="text-end mt-3 pt-2 border-top">
+                            <small class="fw-bold text-uppercase" style="color: #6f42c1;">Total No Imponible: <span id="total-bonos" class="fs-6 ms-2">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="card card-section theme-blue">
+                    <div class="card-header-custom">
+                        <h5 class="section-title"><i class="fas fa-child"></i> 4. Asig. Familiares (Manual)</h5>
+                        <button type="button" class="btn btn-add btn-outline-primary" onclick="agregarItem('asignaciones')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body bg-light">
+                        <div class="alert alert-primary bg-opacity-10 border-0 small py-2 px-3 mb-3 text-primary">
+                            <i class="fas fa-info-circle me-1"></i> El sistema calcula el monto legal automáticamente según cargas. Usa esto solo para retroactivos.
+                        </div>
+                        <div id="container-asignaciones"></div>
+                        <div class="text-end mt-3 pt-2 border-top">
+                            <small class="fw-bold text-primary text-uppercase">Total Manual: <span id="total-asignaciones" class="fs-6 ms-2">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-6">
+                
+                <div class="card card-section theme-orange">
+                    <div class="card-header-custom bg-warning bg-opacity-10">
+                        <h5 class="section-title text-dark"><i class="fas fa-balance-scale text-warning"></i> 5. Descuentos Legales Variables</h5>
+                        <button type="button" class="btn btn-add btn-dark text-warning" onclick="agregarItem('descuentos_legales')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body bg-light">
+                        <p class="text-muted small mb-3">Para APV, cuentas de ahorro AFP o sindicatos. Puedes usar Montos ($) o Porcentajes (%).</p>
+                        
+                        <div class="row px-2 mb-2 text-muted small fw-bold text-uppercase">
+                            <div class="col-6">Descripción</div>
+                            <div class="col-5 text-center">Valor</div>
+                            <div class="col-1"></div>
+                        </div>
+
+                        <div id="container-descuentos_legales"></div>
+                        
+                        <div class="text-end mt-3 pt-2 border-top">
+                            <small class="fw-bold text-dark text-uppercase">Total Estimado: <span id="total-descuentos_legales" class="fs-6 ms-2">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-section theme-red">
+                    <div class="card-header-custom">
+                        <h5 class="section-title"><i class="fas fa-minus-circle"></i> 6. Descuentos y Anticipos</h5>
+                        <button type="button" class="btn btn-add btn-outline-danger" onclick="agregarItem('descuentos')">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="mb-4">
+                            <label class="small fw-bold text-danger text-uppercase mb-1">Anticipo General (Sueldo)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-danger bg-opacity-10 text-danger border-danger"><i class="fas fa-money-bill"></i></span>
+                                <input type="number" name="anticipo" id="inputAnticipo" class="form-control fw-bold text-danger border-danger input-money" value="{{ initial.anticipo }}" placeholder="0">
+                            </div>
+                        </div>
+
+                        <label class="small fw-bold text-secondary text-uppercase mb-2">Otros Descuentos (Préstamos, Farmacia, etc)</label>
+                        <div id="container-descuentos" class="bg-light p-3 rounded border"></div>
+                        
+                        <div class="text-end mt-3">
+                            <small class="fw-bold text-danger text-uppercase">Total Otros: <span id="total-descuentos" class="fs-6 ms-2">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-section">
+                    <div class="card-header-custom bg-secondary text-white">
+                        <h5 class="section-title text-white"><i class="fas fa-exclamation-triangle"></i> 7. Faltante de Caja ({{ periodo_mes_nombre }})</h5>
+                    </div>
+                    <div class="card-body bg-light">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white border rounded shadow-sm">
+                            <span class="small fw-bold text-muted text-uppercase">Faltante Automático</span>
+                            <span class="fw-bold text-dark fs-5">$ {{ faltante_automatico|intcomma|default:0 }}</span>
+                            <input type="hidden" id="val_faltante_auto" value="{{ faltante_automatico|default:0 }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="small fw-bold text-success text-uppercase mb-1">Abono / Recuperación</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-success bg-opacity-10 text-success border-success"><i class="fas fa-hand-holding-usd"></i></span>
+                                <input type="number" name="abono_faltante" id="inputAbonoFaltante" 
+                                       class="form-control fw-bold text-success border-success input-money" 
+                                       value="{{ initial.abono_faltante }}" placeholder="0">
+                            </div>
+                            <div class="form-text small mt-1"><i class="fas fa-info-circle"></i> Monto que el trabajador ya pagó o devolvió. Se resta al faltante.</div>
+                        </div>
+
+                        <div class="text-end border-top pt-2">
+                            <small class="fw-bold text-danger text-uppercase">Total a Descontar: <span id="total-faltante-final" class="fs-6 ms-2">$0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="sticky-footer">
+            <div class="d-none d-md-block">
+                <span class="total-badge text-uppercase fw-bold">Base: ${{ trabajador.sueldo_base|intcomma }}</span>
+                <span class="total-badge text-uppercase fw-bold ms-3">Días: <span id="footer-dias">30</span></span>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end me-3">
+                    <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Líquido Aprox (Referencial)</div>
+                    <div class="total-value" id="footer-liquido-estimado">---</div>
+                </div>
+                <button type="submit" class="btn btn-dark btn-lg rounded-pill shadow px-5 fw-bold">
+                    <i class="fas fa-calculator me-2"></i> PROCESAR
+                </button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- 1. ESTADO DE LA APLICACIÓN ---
+        const state = {
+            haberes: [],
+            asignaciones: [],
+            bonos: [],
+            descuentos: [],
+            descuentos_legales: [] 
+        };
+
+        // --- 2. CONFIGURACIÓN Y REFERENCIAS ---
+        const config = {
+            sueldoBase: parseFloat(document.getElementById('base_sueldo').value) || 0,
+            valorHora: parseFloat(document.getElementById('valor_hora').value) || 0,
+            topeGrat: parseFloat(document.getElementById('tope_gratificacion').value) || 99999999
+        };
+
+        const refs = {
+            inputs: {
+                dias: document.getElementById('inputDias'),
+                horas: document.getElementById('inputHoras'),
+                anticipo: document.getElementById('inputAnticipo'),
+                abonoFaltante: document.getElementById('inputAbonoFaltante'),
+                faltanteAuto: document.getElementById('val_faltante_auto')
+            },
+            json: {
+                haberes: document.getElementById('inputHaberes'),
+                asignaciones: document.getElementById('inputAsignaciones'),
+                bonos: document.getElementById('inputBonos'),
+                descuentos: document.getElementById('inputDescuentos'),
+                descuentos_legales: document.getElementById('inputDescuentosLegales')
+            },
+            containers: {
+                haberes: document.getElementById('container-haberes'),
+                asignaciones: document.getElementById('container-asignaciones'),
+                bonos: document.getElementById('container-bonos'),
+                descuentos: document.getElementById('container-descuentos'),
+                descuentos_legales: document.getElementById('container-descuentos_legales')
+            },
+            totals: {
+                haberes: document.getElementById('total-haberes'),
+                asignaciones: document.getElementById('total-asignaciones'),
+                bonos: document.getElementById('total-bonos'),
+                descuentos: document.getElementById('total-descuentos'),
+                descuentos_legales: document.getElementById('total-descuentos_legales'),
+                faltante: document.getElementById('total-faltante-final'),
+                footerDias: document.getElementById('footer-dias'),
+                footerLiquido: document.getElementById('footer-liquido-estimado')
+            }
+        };
+
+        // --- 3. INICIALIZACIÓN DE DATOS ---
+        function safeParse(jsonStr) {
+            try { return JSON.parse(jsonStr) || []; } catch(e) { return []; }
+        }
+
+        state.haberes = safeParse(refs.json.haberes.value);
+        state.asignaciones = safeParse(refs.json.asignaciones.value);
+        state.bonos = safeParse(refs.json.bonos.value);
+        state.descuentos = safeParse(refs.json.descuentos.value);
+        state.descuentos_legales = safeParse(refs.json.descuentos_legales.value);
+
+        // --- 4. LÓGICA DE RENDERIZADO (DOM) ---
+        // Solo se llama al agregar/eliminar items, NO al escribir
+        function render(type) {
+            const list = state[type];
+            const container = refs.containers[type];
+            container.innerHTML = '';
+            
+            list.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'row g-2 mb-2 align-items-center animate__animated animate__fadeIn'; // Animación suave
+
+                if (type === 'descuentos_legales') {
+                    // Render especial para Descuentos Legales
+                    const isPct = item.tipo === '%';
+                    row.innerHTML = `
+                        <div class="col-6">
+                            <input type="text" class="form-control form-control-sm input-clean" 
+                                value="${item.desc}" placeholder="Ej: APV..."
+                                oninput="handleInput('${type}', ${index}, 'desc', this.value)">
+                        </div>
+                        <div class="col-5">
+                            <div class="input-group input-group-sm">
+                                <select class="form-select bg-light text-center px-1 border-secondary" style="max-width: 50px;" 
+                                    onchange="handleInput('${type}', ${index}, 'tipo', this.value)">
+                                    <option value="$" ${!isPct ? 'selected' : ''}>$</option>
+                                    <option value="%" ${isPct ? 'selected' : ''}>%</option>
+                                </select>
+                                <input type="number" class="form-control input-money" 
+                                    value="${item.valor}" step="0.1" placeholder="0"
+                                    oninput="handleInput('${type}', ${index}, 'valor', this.value)">
+                            </div>
+                        </div>
+                        <div class="col-1 text-end">
+                            <i class="fas fa-times delete-btn" onclick="deleteItem('${type}', ${index})"></i>
+                        </div>
+                    `;
+                } else {
+                    // Render genérico para Haberes, Bonos, Asignaciones, Descuentos
+                    row.innerHTML = `
+                        <div class="col-7">
+                            <input type="text" class="form-control form-control-sm input-clean" 
+                                value="${item.desc}" placeholder="Descripción..."
+                                oninput="handleInput('${type}', ${index}, 'desc', this.value)">
+                        </div>
+                        <div class="col-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted border-0">$</span>
+                                <input type="number" class="form-control input-money input-clean" 
+                                    value="${item.monto === 0 ? '' : item.monto}" placeholder="0"
+                                    oninput="handleInput('${type}', ${index}, 'monto', this.value)">
+                            </div>
+                        </div>
+                        <div class="col-1 text-end">
+                            <i class="fas fa-times delete-btn" onclick="deleteItem('${type}', ${index})"></i>
+                        </div>
+                    `;
+                }
+                container.appendChild(row);
+            });
+
+            if (list.length === 0) {
+                container.innerHTML = '<div class="text-center py-3 text-muted small fst-italic border border-dashed rounded bg-white">Sin elementos agregados</div>';
+            }
+
+            recalcularTotales();
+        }
+
+        // --- 5. MANEJO DE EVENTOS DE INPUT (SIN RE-RENDER) ---
+        // Esta función actualiza el estado pero NO toca el DOM de los inputs
+        window.handleInput = function(type, index, field, value) {
+            // Actualizar State
+            state[type][index][field] = value;
+            
+            // Si es 'descuentos_legales' y cambian valores, o si es 'haberes' y cambia monto (afecta base imponible de los % legales)
+            // debemos actualizar totales.
+            recalcularTotales();
+        };
+
+        // --- 6. CÁLCULO DE TOTALES ---
+        function recalcularTotales() {
+            // 1. Obtener valores base
+            const dias = parseInt(refs.inputs.dias.value) || 30;
+            const horas = parseFloat(refs.inputs.horas.value) || 0;
+            const sueldoProp = (config.sueldoBase / 30) * dias;
+            const montoHoras = horas * config.valorHora;
+
+            // 2. Sumar listas simples
+            const sumList = (list) => list.reduce((acc, item) => acc + (parseFloat(item.monto) || 0), 0);
+            
+            const totalHaberes = sumList(state.haberes);
+            const totalAsignaciones = sumList(state.asignaciones);
+            const totalBonos = sumList(state.bonos);
+            const totalDescuentosSimples = sumList(state.descuentos);
+
+            // 3. Calcular Imponible Estimado (para descuentos legales %)
+            const basePreGrat = sueldoProp + montoHoras + totalHaberes;
+            let grat = basePreGrat * 0.25;
+            if (grat > config.topeGrat) grat = config.topeGrat;
+            const imponibleEstimado = basePreGrat + grat;
+
+            // 4. Calcular Descuentos Legales Variables
+            let totalLegalesVar = 0;
+            state.descuentos_legales.forEach(item => {
+                let val = parseFloat(item.valor) || 0;
+                if (item.tipo === '%') {
+                    totalLegalesVar += (imponibleEstimado * (val / 100));
+                } else {
+                    totalLegalesVar += val;
+                }
+            });
+
+            // 5. Faltante
+            const autoFaltante = parseFloat(refs.inputs.faltanteAuto.value) || 0;
+            const abonoFaltante = parseFloat(refs.inputs.abonoFaltante.value) || 0;
+            let finalFaltante = autoFaltante - abonoFaltante;
+            if (finalFaltante < 0) finalFaltante = 0;
+
+            // 6. Actualizar Textos en Pantalla
+            const fmt = (n) => '$ ' + Math.round(n).toLocaleString('es-CL');
+
+            refs.totals.haberes.textContent = fmt(totalHaberes);
+            refs.totals.asignaciones.textContent = fmt(totalAsignaciones);
+            refs.totals.bonos.textContent = fmt(totalBonos);
+            refs.totals.descuentos.textContent = fmt(totalDescuentosSimples);
+            refs.totals.descuentos_legales.textContent = fmt(totalLegalesVar);
+            refs.totals.faltante.textContent = fmt(finalFaltante);
+            
+            // Footer
+            refs.totals.footerDias.textContent = dias;
+            
+            // Calculo SUPER simplificado de liquido para referencia rápida (sin impuestos exactos ni previred exacta)
+            // (Imponible - 20% aprox) + NoImp - Descuentos
+            const descLegalesAprox = imponibleEstimado * 0.20; 
+            const anticipo = parseFloat(refs.inputs.anticipo.value) || 0;
+            const liquidoAprox = imponibleEstimado - descLegalesAprox - totalLegalesVar + totalAsignaciones + totalBonos - totalDescuentosSimples - anticipo - finalFaltante;
+            
+            refs.totals.footerLiquido.textContent = fmt(liquidoAprox);
+
+            // 7. Actualizar Inputs Ocultos (JSON para el Backend)
+            refs.json.haberes.value = JSON.stringify(state.haberes);
+            refs.json.asignaciones.value = JSON.stringify(state.asignaciones);
+            refs.json.bonos.value = JSON.stringify(state.bonos);
+            refs.json.descuentos.value = JSON.stringify(state.descuentos);
+            refs.json.descuentos_legales.value = JSON.stringify(state.descuentos_legales);
+        }
+
+        // --- 7. ACCIONES GLOBALES ---
+        window.agregarItem = function(type) {
+            if (type === 'descuentos_legales') {
+                state[type].push({ desc: '', tipo: '$', valor: 0 });
+            } else {
+                state[type].push({ desc: '', monto: '' });
+            }
+            render(type); // Aquí SÍ renderizamos porque agregamos un nodo
+        };
+
+        window.deleteItem = function(type, index) {
+            state[type].splice(index, 1);
+            render(type); // Aquí SÍ renderizamos porque quitamos un nodo
+        };
+
+        // Listeners para inputs estáticos que afectan totales
+        ['inputDias', 'inputHoras', 'inputAnticipo', 'inputAbonoFaltante'].forEach(id => {
+            document.getElementById(id).addEventListener('input', recalcularTotales);
+        });
+
+        // --- 8. RENDER INICIAL ---
+        render('haberes');
+        render('asignaciones');
+        render('bonos');
+        render('descuentos');
+        render('descuentos_legales');
+    });
+</script>
+
+{% endblock %}

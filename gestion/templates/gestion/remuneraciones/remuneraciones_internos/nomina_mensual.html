@@ -1,0 +1,366 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<div style="width: 98%; max-width: 1400px; margin: 0 auto; padding-top: 20px; padding-bottom: 30px;">
+
+    <div class="header-lote-card" style="margin-bottom: 20px; position: relative;">
+        <div class="header-info">
+            <div class="titulo-row">
+                <h2 class="lote-title">
+                    <i class="fas fa-user-tie" style="color: var(--lipi-blue); margin-right: 10px;"></i>
+                    Nómina de Sueldos
+                </h2>
+            </div>
+            <div class="meta-row">
+                <div class="meta-item">
+                    <i class="fas fa-info-circle"></i> 
+                    Gestión de remuneraciones personal interno
+                </div>
+            </div>
+        </div>
+
+        <div class="header-actions" style="display: flex; align-items: center; gap: 10px;">
+            
+            <a href="{% url 'exportar_excel_global' %}?fecha={{ periodo_value }}" 
+               class="btn-square-excel" 
+               title="Descargar Excel Consolidado (Todos)">
+                <i class="fas fa-file-excel"></i>
+            </a>
+
+            <div style="position: relative;">
+                <button onclick="toggleMenuFiltros()" class="btn-square-filter" title="Filtrar listado">
+                    <i class="fas fa-filter"></i>
+                    <span id="filtro-dot" style="display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: #dc3545; border-radius: 50%; border: 2px solid white;"></span>
+                </button>
+
+                <div id="menu-filtros" class="filter-dropdown" style="display: none;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 0.85rem; color: #999; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid #eee; padding-bottom: 5px;">Filtrar por:</h4>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 4px;">Cargo</label>
+                        <select id="filtro-cargo" onchange="aplicarFiltros()" class="filter-select">
+                            <option value="todos">Todos los Cargos</option>
+                            <option value="Operario">Operario</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Supervisor">Supervisor</option>
+                            <option value="Chofer">Chofer</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 4px;">Estado Mes</label>
+                        <select id="filtro-estado" onchange="aplicarFiltros()" class="filter-select">
+                            <option value="todos">Todos los Estados</option>
+                            <option value="calculado">Calculado</option>
+                            <option value="pendiente">Pendiente</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <form method="GET" style="background: #f8f9fa; border: 1px solid #ddd; padding: 5px 15px; border-radius: 50px; display: flex; align-items: center; gap: 10px; height: 40px;">
+                <label for="mes_seleccionado" style="font-weight: 600; color: #666; font-size: 0.9rem; margin: 0;">
+                    <i class="far fa-calendar-alt"></i>
+                </label>
+                <input type="month" 
+                       name="fecha" 
+                       id="mes_seleccionado"
+                       value="{{ periodo_value }}" 
+                       onchange="this.form.submit()" 
+                       style="border: none; outline: none; background: transparent; font-family: 'Poppins', sans-serif; font-weight: 700; color: var(--lipi-blue); cursor: pointer;">
+            </form>
+
+            <a href="{% url 'menu_remuneraciones' %}" class="btn-back" style="height: 40px;">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-card" style="margin-bottom: 20px; padding: 20px 25px; transform: none !important; cursor: default; display: flex; flex-direction: column; justify-content: center;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; width: 100%;">
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-gray); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                Avance de Cálculos ({{ periodo_str }})
+            </h3>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="text-align: right;">
+                    <span id="count-procesados" style="font-weight: 800; font-size: 1.3rem; color: var(--lipi-blue);">{{ calculados_count }}</span>
+                    <span style="font-size: 1.3rem; color: #bbb; font-weight: 300;">/</span>
+                    <span id="count-total" style="font-weight: 800; font-size: 1.3rem; color: #777;">{{ total_count }}</span>
+                </div>
+                
+                <div style="background-color: #e6f9ed; color: #28a745; border: 1px solid #c3e6cb; padding: 4px 12px; border-radius: 50px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center;">
+                    <i class="fas fa-chart-pie" style="margin-right: 5px; font-size: 0.8rem;"></i>
+                    <span id="txt-porcentaje">
+                        {% if total_count > 0 %}
+                            {% widthratio calculados_count total_count 100 %}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="height: 10px; background-color: #f1f1f1; border-radius: 10px; overflow: hidden; width: 100%; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+            <div id="barra-progreso" 
+                 style="width: {% if total_count > 0 %}{% widthratio calculados_count total_count 100 %}{% else %}0{% endif %}%; height: 100%; background: linear-gradient(90deg, #28a745, #20c997); border-radius: 10px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card" style="align-items: stretch; text-align: left; padding: 0; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; transform: none !important; cursor: default;">
+        
+        <div style="padding: 15px 20px; background-color: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--lipi-blue); margin: 0;">Personal Contratado</h3>
+            <span style="font-size: 0.85rem; color: #888;" id="contador-registros">Mostrando {{ total_count }} registros</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background-color: #e9ecef; color: var(--text-gray); font-size: 0.8rem; text-transform: uppercase;">
+                    <tr>
+                        <th style="padding: 12px 20px; text-align: left;">Trabajador</th>
+                        <th style="padding: 12px 20px; text-align: center;">Cargo</th>
+                        <th style="padding: 12px 20px; text-align: center;">Estado Mes</th>
+                        <th style="padding: 12px 20px; text-align: right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-trabajadores">
+                    {% for item in trabajadores_lista %}
+                        {% with t=item.obj liquidacion=item.liquidacion %}
+                        
+                        <tr class="fila-trabajador" 
+                            data-cargo="{{ t.cargo|default:'Sin Cargo' }}" 
+                            data-estado="{% if item.tiene_calculo %}calculado{% else %}pendiente{% endif %}"
+                            style="border-bottom: 1px solid #eee; transition: background 0.2s;">
+                            
+                            <td style="padding: 15px 20px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 40px; height: 40px; background-color: rgba(29, 29, 80, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--lipi-blue); font-weight: 700;">
+                                        {{ t.nombre|slice:":1" }}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; color: #333; font-size: 0.95rem;">{{ t.nombre }}</div>
+                                        <div class="rut-formatter" style="font-size: 0.8rem; color: #888;">{{ t.rut|default:'' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td style="padding: 15px 20px; text-align: center;">
+                                <span style="background-color: #f1f3f5; color: #495057; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                    {{ t.cargo|default:'Operario' }}
+                                </span>
+                            </td>
+
+                            <td style="padding: 15px 20px; text-align: center;">
+                                {% if item.tiene_calculo %}
+                                    <span class="status-pill closed" style="display: inline-block;">
+                                        <i class="fas fa-check-circle"></i> CALCULADO
+                                    </span>
+                                {% else %}
+                                    <span class="status-pill open" style="display: inline-block;">
+                                        <i class="fas fa-clock"></i> PENDIENTE
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding: 15px 20px; text-align: right;">
+                                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                                   {% if item.tiene_calculo %}
+                                        
+                                        <a href="{% url 'exportar_liquidacion_excel' liquidacion.id %}" 
+                                           title="Descargar Excel Individual"
+                                           class="btn-square-action"
+                                           style="background-color: #28a745; border-color: #28a745;">
+                                            <i class="fas fa-file-excel"></i>
+                                        </a>
+
+                                        <a href="{% url 'ver_liquidacion' liquidacion.id %}" style="text-decoration: none;">
+                                            <button class="btn-workers" style="min-height: auto; padding: 6px 15px; font-size: 0.85rem; border: 2px solid var(--lipi-blue); background-color: white; color: var(--lipi-blue); cursor: pointer; display: inline-flex;">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </button>
+                                        </a>
+
+                                        <a href="{% url 'calcular_sueldo' liquidacion.id %}" 
+                                           onclick="return confirmarRecalculo(event)"
+                                           title="Recalcular Liquidación">
+                                            <button class="btn-square-action">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
+                                        </a>
+
+                                   {% else %}
+                                        <a href="{% url 'calcular_sueldo' t.id %}?periodo={{ periodo_value }}" style="text-decoration: none;">
+                                            <button class="btn-workers" style="min-height: auto; padding: 6px 15px; font-size: 0.85rem; border: 2px solid var(--lipi-blue); cursor: pointer; display: inline-flex;">
+                                                <i class="fas fa-calculator"></i> Procesar
+                                            </button>
+                                        </a>
+                                   {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endwith %}
+                    {% empty %}
+                        <tr id="no-results">
+                            <td colspan="4" style="padding: 40px; text-align: center; color: #999;">
+                                <div style="font-size: 2rem; margin-bottom: 10px; opacity: 0.3;"><i class="fas fa-user-slash"></i></div>
+                                <p>No se encontró personal activo para este periodo.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Formateador de RUT
+        const rutElements = document.querySelectorAll('.rut-formatter');
+        rutElements.forEach(el => {
+            let rut = el.innerText.trim();
+            if (rut && rut.length > 1) {
+                let cleanRut = rut.replace(/[^0-9kK]/g, '');
+                if (cleanRut.length > 1) {
+                    const dv = cleanRut.slice(-1);
+                    const cuerpo = cleanRut.slice(0, -1);
+                    const cuerpoFormateado = new Intl.NumberFormat('es-CL').format(cuerpo);
+                    el.innerText = `${cuerpoFormateado}-${dv}`;
+                }
+            }
+        });
+    });
+
+    function confirmarRecalculo(e) {
+        if(!confirm("⚠️ ¿Deseas recalcular esta liquidación?\n\nSe actualizarán los valores base, pero revisa si hay bonos manuales.")) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
+    function toggleMenuFiltros() {
+        const menu = document.getElementById('menu-filtros');
+        if (menu.style.display === 'none' || menu.style.display === '') {
+            menu.style.display = 'block';
+        } else {
+            menu.style.display = 'none';
+        }
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.btn-square-filter') && !event.target.closest('.filter-dropdown')) {
+            document.getElementById('menu-filtros').style.display = 'none';
+        }
+    }
+
+    function aplicarFiltros() {
+        const cargo = document.getElementById('filtro-cargo').value;
+        const estado = document.getElementById('filtro-estado').value;
+        const dot = document.getElementById('filtro-dot');
+        const filas = document.querySelectorAll('.fila-trabajador');
+        
+        let visiblesTotal = 0;
+        let visiblesCalculados = 0;
+
+        // Mostrar punto rojo si hay filtro activo
+        if (cargo !== 'todos' || estado !== 'todos') {
+            dot.style.display = 'block';
+        } else {
+            dot.style.display = 'none';
+        }
+
+        filas.forEach(fila => {
+            const dataCargo = fila.getAttribute('data-cargo');
+            const dataEstado = fila.getAttribute('data-estado');
+
+            const matchCargo = (cargo === 'todos') || (dataCargo.includes(cargo));
+            const matchEstado = (estado === 'todos') || (dataEstado === estado);
+
+            if (matchCargo && matchEstado) {
+                fila.style.display = '';
+                visiblesTotal++;
+                if (dataEstado === 'calculado') {
+                    visiblesCalculados++;
+                }
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+
+        document.getElementById('contador-registros').innerText = 'Mostrando ' + visiblesTotal + ' registros';
+        document.getElementById('count-procesados').innerText = visiblesCalculados;
+        document.getElementById('count-total').innerText = visiblesTotal;
+
+        let porcentaje = 0;
+        if (visiblesTotal > 0) {
+            porcentaje = Math.round((visiblesCalculados / visiblesTotal) * 100);
+        }
+        
+        document.getElementById('barra-progreso').style.width = porcentaje + '%';
+        document.getElementById('txt-porcentaje').innerText = porcentaje + '%';
+    }
+</script>
+
+<style>
+    /* Estilos Generales */
+    .header-lote-card { background: white; border-radius: 12px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 15px; }
+    .header-info { flex: 1; }
+    .lote-title { font-size: 1.4rem; font-weight: 700; color: #333; margin: 0; display: flex; align-items: center; }
+    .meta-row { display: flex; gap: 15px; color: #666; font-size: 0.85rem; margin-top: 5px; }
+    
+    .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-pill.open { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .status-pill.closed { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+    .btn-back { text-decoration: none; color: #777; font-weight: 600; padding: 0 15px; border-radius: 6px; transition: background 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; background: #f8f9fa; border: 1px solid #ddd; }
+    .btn-back:hover { background-color: #e2e6ea; color: #333; }
+    
+    .btn-workers:hover { transform: translateY(-2px); }
+
+    .btn-square-filter {
+        width: 40px; height: 40px; background: white; border: 1px solid #ddd; border-radius: 8px; color: var(--lipi-blue); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .btn-square-filter:hover { background-color: var(--lipi-blue); color: white; border-color: var(--lipi-blue); }
+
+    .btn-square-excel {
+        width: 40px; height: 40px; background: #28a745; border: 1px solid #28a745; border-radius: 8px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-decoration: none;
+    }
+    .btn-square-excel:hover { background-color: #218838; transform: translateY(-2px); color: white; }
+
+    .btn-square-action {
+        width: 34px; height: 34px; 
+        background: var(--lipi-blue);
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        text-decoration: none; /* Asegurar que no tenga subrayado si es <a> */
+    }
+    .btn-square-action:hover { background-color: #101030; transform: translateY(-2px); color: white; }
+
+    .filter-dropdown {
+        position: absolute; top: 50px; right: 0; width: 250px; background-color: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #eee; padding: 15px; z-index: 1000; animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .filter-select { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.9rem; color: #333; outline: none; }
+    .filter-select:focus { border-color: var(--lipi-blue); }
+    
+    .dashboard-card {
+        background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+</style>
+
+{% endblock %}

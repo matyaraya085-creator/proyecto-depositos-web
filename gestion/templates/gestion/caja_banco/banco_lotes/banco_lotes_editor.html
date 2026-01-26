@@ -1,0 +1,524 @@
+{% extends 'gestion/core/base.html' %}
+
+{% block content %}
+
+<div style="width: 98%; max-width: 1600px; margin: 0 auto; padding-top: 15px; padding-bottom: 20px;">
+
+    <div class="header-lote-card">
+        
+        <div class="header-info">
+            <div class="titulo-row">
+                <h2 class="lote-title">
+                    Lote N° {{ lote.numero_lote }}
+                    {% if lote.nombre_lote %}
+                        <span class="lote-subtitle">- {{ lote.nombre_lote }}</span>
+                    {% endif %}
+                </h2>
+                
+                {% if lote.cerrado %}
+                    <span class="status-pill closed"><i class="fas fa-lock"></i> CERRADO</span>
+                {% else %}
+                    <span class="status-pill open"><i class="fas fa-lock-open"></i> ABIERTO</span>
+                {% endif %}
+
+                {% if not lote.cerrado or request.user.is_superuser %}
+                    <button onclick="renombrarLote('{{ lote.id }}', '{{ lote.nombre_lote|default:'' }}')" 
+                            class="btn-edit-name" title="Editar nombre">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                {% endif %}
+            </div>
+
+            <div class="meta-row">
+                <div class="meta-item">
+                    <i class="fas fa-warehouse"></i> 
+                    <strong>{{ lote.bodega_nombre }}</strong>
+                </div>
+                <div class="meta-item">
+                    <i class="far fa-calendar-alt"></i> 
+                    {{ lote.fecha|date:"d/m/Y" }}
+                </div>
+                {% if lote.updated_at %}
+                    <div class="meta-item text-muted">
+                        <i class="far fa-clock"></i> 
+                        Act: {{ lote.updated_at|date:"H:i" }}
+                        <span id="auto-save-status" style="margin-left: 10px; font-weight: bold; font-size: 0.8rem;"></span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="header-actions">
+            
+            <div class="action-group">
+                {% if not lote.cerrado %}
+                    {% if puede_editar %}
+                        <button type="submit" form="form-arqueo" name="accion" value="guardar" class="btn-action btn-save">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+
+                        <button type="submit" form="form-arqueo" name="accion" value="cerrar_lote" 
+                                onclick="return confirm('¿Estás seguro de CERRAR este lote? No se podrán hacer más cambios.')"
+                                class="btn-action btn-close-box">
+                            <i class="fas fa-lock"></i> Cerrar Caja
+                        </button>
+                    {% endif %}
+
+                {% else %}
+                    {% if request.user.is_superuser %}
+                        <button type="submit" form="form-arqueo" name="accion" value="reabrir_lote" 
+                                onclick="return confirm('¿REABRIR lote? Esto permitirá ediciones nuevamente.')"
+                                class="btn-action btn-reopen">
+                            <i class="fas fa-unlock"></i> Reabrir
+                        </button>
+                    {% endif %}
+
+                    <div class="export-tools">
+                        <button onclick="window.print()" class="btn-tool" title="Imprimir">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        <a href="{% url 'generar_pdf_lote' lote.id %}" class="btn-tool" title="PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </a>
+                        <a href="{% url 'exportar_lote_excel' lote.id %}" class="btn-tool" title="Excel">
+                            <i class="fas fa-file-excel"></i>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <a href="{% url 'deposito_bodega' lote.bodega_nombre %}?fecha_seleccionada={{ lote.fecha|date:'Y-m-d' }}" 
+               class="btn-back">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div id="barra-diferencia" style="margin-bottom: 15px; padding: 10px; border-radius: 8px; text-align: center; transition: all 0.3s; background-color: #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
+            <span style="font-size: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Estado de Caja:</span>
+            <span id="diferencia-display" style="font-size: 1.6rem; font-weight: 800;">$0</span>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 35% 64%; gap: 1%; align-items: start;">
+
+        <div class="dashboard-card" style="align-items: stretch; text-align: left; padding: 0; overflow: hidden; transform: none !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; cursor: default;">
+            
+            <div style="padding: 10px 15px; background-color: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--lipi-blue); margin: 0;">Aportes</h3>
+                {% if puede_editar %}
+                    <button type="button" onclick="abrirModalAporte()" 
+                            class="btn-workers" 
+                            style="padding: 4px 12px; font-size: 0.8rem; min-height: auto; border: none; background-color: var(--lipi-blue); color: white; cursor: pointer; transition: background 0.2s;">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                {% endif %}
+            </div>
+
+            <div style="height: 55vh; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="background-color: #e9ecef; color: var(--text-gray); font-size: 0.75rem; text-transform: uppercase; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="padding: 8px 15px; text-align: left;">Trabajador</th>
+                            <th style="padding: 8px; text-align: right;">Monto</th>
+                            {% if puede_editar %}<th style="width: 70px;"></th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for aporte in aportes %}
+                        <tr style="border-bottom: 1px solid #eee; font-size: 0.9rem;">
+                            <td style="padding: 6px 15px;">
+                                <strong style="color: #333;">{{ aporte.trabajador.nombre }}</strong>
+                                {% if aporte.descripcion %}
+                                    <div style="font-size: 0.75rem; color: #888;">{{ aporte.descripcion }}</div>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: var(--lipi-blue);" 
+                                class="monto-aporte" 
+                                data-raw="{{ aporte.monto }}">
+                                ${{ aporte.monto }}
+                            </td>
+                            {% if puede_editar %}
+                                <td style="padding: 6px; text-align: center; white-space: nowrap;">
+                                    
+                                    <button type="button" 
+                                            onclick="editarAporte('{{ aporte.id }}', '{{ aporte.trabajador.id }}', '{{ aporte.monto }}', '{{ aporte.descripcion|escapejs }}')"
+                                            style="background: none; border: none; color: var(--lipi-blue); cursor: pointer; font-size: 0.9rem; margin-right: 5px;"
+                                            title="Editar Aporte">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+
+                                    <form action="{% url 'quitar_aportes_seleccion' lote.id %}" method="POST" style="display: inline; margin: 0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aporte_ids" value="{{ aporte.id }}">
+                                        <button type="submit" 
+                                                onclick="return confirm('¿Eliminar aporte de {{ aporte.trabajador.nombre }}?')"
+                                                style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.9rem;"
+                                                title="Eliminar">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" style="padding: 20px; text-align: center; color: #999; font-size: 0.9rem;">Sin aportes.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding: 10px 15px; background-color: #f8f9fa; border-top: 1px solid #eee; text-align: right;">
+                <div style="font-size: 0.9rem;">
+                    Total Aportes: <strong style="color: var(--lipi-blue); font-size: 1.1rem;" id="total-aportes-display">$0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card" style="align-items: stretch; text-align: left; padding: 0; overflow: hidden; transform: none !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important; cursor: default;">
+            
+            <div style="padding: 10px 15px; background-color: #f8f9fa; border-bottom: 1px solid #eee;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--lipi-blue); margin: 0;">Arqueo de Billetes</h3>
+            </div>
+
+            <form method="POST" id="form-arqueo" style="padding: 0;">
+                {% csrf_token %}
+
+                <div style="height: 55vh; overflow-y: auto; padding: 15px;">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0;">
+                        <div style="display: flex; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 2px solid #eee; font-weight: 700; color: var(--text-gray); font-size: 0.75rem; text-transform: uppercase;">
+                            <div style="width: 25%;">Denominación</div>
+                            <div style="width: 35%; text-align: center;">Cantidad</div>
+                            <div style="width: 40%; text-align: right;">Subtotal</div>
+                        </div>
+
+                        {% for d in denominaciones %}
+                        <div class="fila-billete" style="display: flex; align-items: center; padding: 3px 0; border-bottom: 1px solid #f9f9f9;">
+                            <div style="width: 25%; font-weight: 600; font-size: 0.95rem; color: #444;">{{ d.texto }}</div>
+                            <div style="width: 35%; display: flex; justify-content: center;">
+                                <input type="number" 
+                                    name="cant_{{ d.valor }}" 
+                                    class="input-cantidad compact-input"
+                                    data-valor="{{ d.valor }}"
+                                    value="{{ d.cantidad }}" 
+                                    min="0"
+                                    {% if not puede_editar %}disabled{% endif %}>
+                            </div>
+                            <div style="width: 40%; text-align: right; font-weight: 600; font-size: 0.95rem; color: #666;" class="total-fila">$0</div>
+                        </div>
+                        {% endfor %}
+
+                        <div style="margin-top: 15px; padding: 10px; background-color: rgba(29, 29, 80, 0.03); border-radius: 8px; border: 1px dashed #ccc; display: flex; align-items: center;">
+                            <div style="width: 25%; font-weight: 700; font-size: 0.95rem; color: var(--lipi-blue);">CHEQUES</div>
+                            <div style="width: 35%; display: flex; justify-content: center;">
+                                <input type="number" 
+                                    name="cant_cheque" 
+                                    id="input-cheque"
+                                    value="{{ cheque_guardado }}" 
+                                    min="0"
+                                    {% if not puede_editar %}disabled{% endif %}
+                                    placeholder="$"
+                                    class="compact-input"
+                                    style="border: 2px solid #bbb;">
+                            </div>
+                            <div style="width: 40%; text-align: right; font-weight: 700; font-size: 0.95rem; color: var(--lipi-blue);" id="total-cheque-display">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 10px 15px; background-color: #fff; border-top: 2px solid #eee; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: #777; display: block;">Total Físico</span>
+                        <span style="font-weight: 800; font-size: 1.3rem; color: var(--lipi-blue);" id="total-desglose-display">$0</span>
+                    </div>
+                    
+                    {% if not puede_editar %}
+                         <div class="alert-pill status-success" style="padding: 5px 15px; font-size: 0.75rem;">
+                            <i class="fas fa-lock"></i> Lectura
+                        </div>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<form id="form-renombrar" method="POST" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="nuevo_nombre" id="input-nuevo-nombre">
+</form>
+
+<div id="modal-aporte" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px);">
+    <div style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 400px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+        
+        <div style="padding: 12px 15px; background-color: var(--lipi-blue); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.1rem;" id="modal-titulo">Nuevo Aporte</h3>
+            <span onclick="cerrarModalAporte()" style="color: white; font-size: 24px; font-weight: bold; cursor: pointer;">&times;</span>
+        </div>
+
+        <div style="padding: 20px;">
+            <form action="" method="POST" id="form-nuevo-aporte">
+                {% csrf_token %}
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.9rem;">Trabajador:</label>
+                    <select name="trabajador" id="modal-input-trabajador" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        <option value="" selected disabled>-- Seleccione --</option>
+                        {% for t in trabajadores_disponibles %}
+                            <option value="{{ t.id }}">{{ t.nombre }}</option>
+                        {% empty %}
+                            <option value="" disabled>No hay trabajadores</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.9rem;">Monto ($):</label>
+                    <input type="number" name="monto" id="modal-input-monto" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555; font-size: 0.9rem;">Descripción:</label>
+                    <input type="text" name="descripcion" id="modal-input-descripcion" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                </div>
+                <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button type="button" onclick="cerrarModalAporte()" style="background: #ccc; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: 600; font-size: 0.9rem;">Cancelar</button>
+                    <button type="submit" id="btn-submit-modal" style="background: var(--lipi-blue); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // -------------------------------------------------------------------------
+    // 1. LÓGICA DE RENOMBRAR LOTE
+    // -------------------------------------------------------------------------
+    function renombrarLote(idLote, nombreActual) {
+        let nuevoNombre = prompt("Nombre o turno:", nombreActual);
+        if (nuevoNombre !== null) {
+            let form = document.getElementById('form-renombrar');
+            form.action = "/lote/" + idLote + "/renombrar/";
+            document.getElementById('input-nuevo-nombre').value = nuevoNombre;
+            form.submit();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. LÓGICA DEL MODAL (CREAR Y EDITAR)
+    // -------------------------------------------------------------------------
+    var modal = document.getElementById("modal-aporte");
+    var formAporte = document.getElementById("form-nuevo-aporte");
+    
+    // AQUÍ ESTÁ EL ARREGLO:
+    // Generamos las URLs base con Django. Para la de editar, usamos '0' como marcador.
+    var urlAgregarBase = "{% url 'agregar_aporte' lote.id %}";
+    var urlEditarPlantilla = "{% url 'editar_aporte' 0 %}";
+
+    function abrirModalAporte() { 
+        // Modo Crear
+        modal.style.display = "block"; 
+        document.getElementById('modal-titulo').innerText = "Nuevo Aporte";
+        document.getElementById('btn-submit-modal').innerText = "Guardar";
+        formAporte.action = urlAgregarBase;
+        
+        // Limpiar inputs
+        document.getElementById('modal-input-trabajador').value = "";
+        document.getElementById('modal-input-monto').value = "";
+        document.getElementById('modal-input-descripcion').value = "";
+        
+        const s=document.querySelector('#form-nuevo-aporte select'); 
+        if(s) s.focus(); 
+    }
+
+    function editarAporte(idAporte, idTrabajador, monto, descripcion) {
+        // Modo Editar
+        modal.style.display = "block";
+        document.getElementById('modal-titulo').innerText = "Editar Aporte";
+        document.getElementById('btn-submit-modal').innerText = "Actualizar";
+        
+        // Reemplazamos el '0' por el ID real del aporte
+        formAporte.action = urlEditarPlantilla.replace('0', idAporte); 
+
+        // Rellenar datos
+        document.getElementById('modal-input-trabajador').value = idTrabajador;
+        document.getElementById('modal-input-monto').value = monto;
+        document.getElementById('modal-input-descripcion').value = descripcion;
+    }
+
+    function cerrarModalAporte() { modal.style.display = "none"; }
+    window.onclick = function(event) { if (event.target == modal) modal.style.display = "none"; }
+    
+    // -------------------------------------------------------------------------
+    // 3. CÁLCULOS Y AUTO-GUARDADO
+    // -------------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', function() {
+        function formatMoney(amount) { return '$' + parseInt(amount).toLocaleString('es-CL'); }
+
+        const celdasMonto = document.querySelectorAll('.monto-aporte');
+        let totalAportesCalculado = 0;
+        celdasMonto.forEach(celda => {
+            const rawValue = parseInt(celda.getAttribute('data-raw')) || 0;
+            totalAportesCalculado += rawValue;
+            celda.textContent = formatMoney(rawValue);
+        });
+
+        const displayTotalAportes = document.getElementById('total-aportes-display');
+        if(displayTotalAportes) displayTotalAportes.textContent = formatMoney(totalAportesCalculado);
+
+        const inputs = document.querySelectorAll('.input-cantidad');
+        const inputCheque = document.getElementById('input-cheque');
+        const statusSpan = document.getElementById('auto-save-status');
+
+        // --- SISTEMA DE AUTO GUARDADO ---
+        let timeoutGuardado = null;
+        const urlAutoSave = "{% url 'api_auto_guardar_arqueo' lote.id %}";
+
+        function autoGuardarDatos() {
+            if(statusSpan) {
+                statusSpan.style.color = '#e67e22'; // Naranja
+                statusSpan.innerText = "Guardando...";
+            }
+
+            const formArqueo = document.getElementById('form-arqueo');
+            const formData = new FormData(formArqueo);
+
+            fetch(urlAutoSave, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'ok') {
+                    if(statusSpan) {
+                        statusSpan.style.color = '#27ae60'; // Verde
+                        statusSpan.innerText = "Guardado ✓";
+                        setTimeout(() => { statusSpan.innerText = ""; }, 2000);
+                    }
+                } else {
+                    console.error("Error guardando:", data);
+                    if(statusSpan) statusSpan.innerText = "Error al guardar";
+                }
+            })
+            .catch(error => {
+                console.error('Error red:', error);
+                if(statusSpan) statusSpan.innerText = "Error red";
+            });
+        }
+
+        function triggerAutoGuardado() {
+            if(statusSpan) statusSpan.innerText = "...";
+            clearTimeout(timeoutGuardado);
+            // Guarda 0.8s después de dejar de escribir
+            timeoutGuardado = setTimeout(autoGuardarDatos, 800);
+        }
+
+        // --- CÁLCULOS VISUALES ---
+        function calcularTodo() {
+            let totalEfectivo = 0;
+            inputs.forEach(input => {
+                const valorUnitario = parseInt(input.getAttribute('data-valor'));
+                const cantidad = parseInt(input.value) || 0;
+                const subtotal = valorUnitario * cantidad;
+                const filaPadre = input.closest('.fila-billete'); 
+                if (filaPadre) {
+                    const displayFila = filaPadre.querySelector('.total-fila');
+                    if(displayFila) displayFila.textContent = formatMoney(subtotal);
+                }
+                totalEfectivo += subtotal;
+            });
+            const montoCheque = parseInt(inputCheque.value) || 0;
+            if(document.getElementById('total-cheque-display')) document.getElementById('total-cheque-display').textContent = formatMoney(montoCheque);
+
+            const totalDesglose = totalEfectivo + montoCheque;
+            if(document.getElementById('total-desglose-display')) document.getElementById('total-desglose-display').textContent = formatMoney(totalDesglose);
+
+            const diferencia = totalAportesCalculado - totalDesglose;
+            const divDiferencia = document.getElementById('barra-diferencia');
+            const textDiferencia = document.getElementById('diferencia-display');
+
+            if (diferencia === 0) {
+                divDiferencia.style.backgroundColor = '#d4edda'; divDiferencia.style.color = '#155724';
+                textDiferencia.textContent = "CUADRADO PERFECTO ($0)";
+            } else if (diferencia > 0) {
+                divDiferencia.style.backgroundColor = '#f8d7da'; divDiferencia.style.color = '#721c24';
+                textDiferencia.textContent = 'FALTAN: ' + formatMoney(diferencia);
+            } else {
+                divDiferencia.style.backgroundColor = '#fff3cd'; divDiferencia.style.color = '#856404';
+                textDiferencia.textContent = 'SOBRAN: ' + formatMoney(Math.abs(diferencia));
+            }
+        }
+
+        // Asignar eventos
+        inputs.forEach(input => { 
+            input.addEventListener('input', () => { calcularTodo(); triggerAutoGuardado(); }); 
+            input.addEventListener('focus', function() { this.select(); }); 
+        });
+
+        if(inputCheque) { 
+            inputCheque.addEventListener('input', () => { calcularTodo(); triggerAutoGuardado(); }); 
+            inputCheque.addEventListener('focus', function() { this.select(); }); 
+        }
+
+        // Calcular al inicio
+        calcularTodo();
+    });
+</script>
+
+<style>
+    /* Estilos del Encabezado (Originales) */
+    .header-lote-card { background: white; border-radius: 12px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    .header-info { flex: 1; min-width: 300px; }
+    .titulo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+    .lote-title { font-size: 1.4rem; font-weight: 700; color: #333; margin: 0; }
+    .lote-subtitle { font-weight: 400; color: #666; font-size: 1rem; }
+    .status-pill { padding: 3px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-pill.open { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .status-pill.closed { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .btn-edit-name { background: none; border: 1px solid #ddd; border-radius: 50%; width: 24px; height: 24px; color: var(--lipi-blue); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.8rem; }
+    .btn-edit-name:hover { background: var(--lipi-blue); color: white; }
+    .meta-row { display: flex; gap: 15px; color: #666; font-size: 0.85rem; }
+    .meta-item i { margin-right: 5px; color: #999; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .action-group { display: flex; align-items: center; gap: 8px; }
+    .btn-action { border: none; padding: 8px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.1s; font-size: 0.9rem; }
+    .btn-action:active { transform: scale(0.98); }
+    .btn-save { background-color: var(--lipi-blue); color: white; }
+    .btn-close-box { background-color: #dc3545; color: white; }
+    .btn-reopen { background-color: #ffcc00; color: #333; }
+    .export-tools { display: flex; background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+    .btn-tool { background: none; border: none; padding: 8px 12px; color: #555; cursor: pointer; border-right: 1px solid #ddd; transition: background 0.2s; font-size: 0.9rem;}
+    .btn-tool:last-child { border-right: none; }
+    .btn-tool:hover { background: #e9ecef; color: var(--lipi-blue); }
+    .btn-back { text-decoration: none; color: #777; font-weight: 600; padding: 8px 12px; border-radius: 6px; transition: background 0.2s; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+    .btn-back:hover { background-color: #f0f0f0; color: #333; }
+    button i.fa-trash-alt:hover { color: #dc3545 !important; transform: scale(1.2); }
+    
+    /* CSS ESPECIFICO COMPACTO PARA LOS INPUTS */
+    .compact-input {
+        width: 100%; max-width: 100px; 
+        padding: 4px; 
+        border: 2px solid #e0e0e0; 
+        border-radius: 6px; 
+        text-align: center; 
+        font-weight: 700; 
+        font-size: 0.95rem; 
+        color: var(--lipi-blue); 
+        outline: none; 
+        transition: border-color 0.2s;
+    }
+    .compact-input:focus { border-color: var(--lipi-yellow); background-color: #fffdf5; }
+
+    @media print {
+        .btn-workers, .btn-workers i, a.btn-workers, .header-actions, .btn-edit-name { display: none !important; }
+        header, nav, footer { display: none !important; }
+        body { background: white; }
+        #barra-diferencia { border: 1px solid #ccc; }
+        .header-lote-card { box-shadow: none; border-bottom: 2px solid #333; border-radius: 0; }
+        .dashboard-card { box-shadow: none !important; border: 1px solid #ccc; }
+        .compact-input { border: none; text-align: right; }
+    }
+</style>
+
+{% endblock %}

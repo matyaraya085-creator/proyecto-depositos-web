@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* --- VARIABLES --- */
+        /* --- VARIABLES (Coincidentes con tu identidad de marca) --- */
         :root {
             --lipi-yellow: #ffcd00;
             --lipi-yellow-hover: #e6b800;
@@ -27,25 +27,25 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--bg-color);
             display: flex;
-            flex-direction: column; /* Elementos uno debajo del otro */
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
+            justify-content: center; /* Centra verticalmente */
+            align-items: center;     /* Centra horizontalmente */
             min-height: 100vh;
             color: var(--lipi-blue);
             padding: 20px;
         }
 
-        /* --- ENCABEZADO (Logo + Título Nuevo) --- */
+        /* --- ENCABEZADO --- */
         .header-container {
             text-align: center;
-            margin-bottom: 30px; /* Espacio entre el título y la tarjeta blanca */
+            margin-bottom: 30px;
         }
 
         .logo-img {
-            width: 150px; /* Tamaño del logo */
+            width: 150px;
             height: auto;
             display: block;
-            margin: 0 auto 15px auto; /* Centrado y margen abajo */
+            margin: 0 auto 15px auto;
         }
 
         .main-title {
@@ -55,9 +55,19 @@
             letter-spacing: 1px;
             color: var(--lipi-blue);
             margin: 0;
+            line-height: 1.2;
+        }
+        
+        /* Estilo nuevo para el subtítulo de la empresa */
+        .sub-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-gray);
+            margin-top: 5px;
+            letter-spacing: 0.5px;
         }
 
-        /* --- TARJETA BLANCA --- */
+        /* --- TARJETA DE LOGIN (Específica para este formulario) --- */
         .card {
             background: white;
             padding: 40px 35px;
@@ -82,7 +92,7 @@
             font-weight: 400;
         }
 
-        /* --- FORMULARIO --- */
+        /* --- INPUTS Y FORMULARIO --- */
         .form-group {
             margin-bottom: 20px;
             text-align: left;
@@ -119,7 +129,7 @@
             font-weight: 400;
         }
 
-        /* --- BOTÓN --- */
+        /* --- BOTÓN DE INGRESO --- */
         .btn {
             width: 100%;
             padding: 14px;
@@ -140,6 +150,7 @@
             transform: translateY(-2px);
         }
 
+        /* --- MENSAJES DE ERROR DJANGO --- */
         .django-error {
             background-color: #ffebee;
             color: #c62828;
@@ -156,7 +167,9 @@
 
     <div class="header-container">
         <img src="{% static 'img/logo-lipigas.svg' %}" alt="Logo Lipigas" class="logo-img">
+        
         <h1 class="main-title">LIPIGAS OVALLE</h1>
+        <h2 class="sub-title">Servicios Logísticos Celestina Araya SPA</h2>
     </div>
 
     <div class="card">

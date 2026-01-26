@@ -1,0 +1,408 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<style>
+    .tabla-compacta th, 
+    .tabla-compacta td {
+        padding: 0.25rem 0.25rem !important;
+        vertical-align: middle;
+    }
+    .tabla-compacta {
+        font-size: 0.85rem;
+    }
+    /* Estilo para los rectángulos de turnos */
+    .turno-card {
+        transition: all 0.2s;
+        border-left: 4px solid #0d6efd; /* Borde azul por defecto */
+    }
+    .turno-card:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+<div class="container-fluid" style="max-width: 1200px;">
+    
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-4">
+        <div>
+            <h2 class="fw-bold mb-0">📅 Reporte Mensual</h2>
+            <p class="text-muted">
+                {% if trabajador_seleccionado %}
+                    Rendimiento de <span class="fw-bold text-dark">{{ trabajador_seleccionado.nombre }}</span>
+                {% else %}
+                    Selecciona un trabajador
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left"></i> Volver al Menú
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body py-3">
+            <form class="row g-3 align-items-center" method="GET">
+                <div class="col-md-7">
+                    <label class="fw-bold small text-muted mb-1">Trabajador:</label>
+                    <select class="form-select border-primary shadow-sm" name="trabajador_id" required onchange="this.form.submit()">
+                        <option value="">Selecciona...</option>
+                        {% for t in trabajadores %}
+                        <option value="{{ t.id }}" {% if t.id|stringformat:"i" == request.GET.trabajador_id %}selected{% endif %}>
+                            {{ t.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="fw-bold small text-muted mb-1">Mes:</label>
+                    <input type="month" name="fecha_seleccionada" class="form-control border-primary shadow-sm" value="{{ fecha_seleccionada }}" onchange="this.form.submit()">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-secondary">🗓️ Detalle Día a Día</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    
+                    {% if not trabajador_seleccionado %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-users-slash fa-3x mb-3"></i><br>Selecciona un trabajador.
+                        </div>
+                    {% elif not report_data %}
+                         <div class="text-center py-5 text-muted">
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i><br>Sin movimientos este mes.
+                        </div>
+                    {% else %}
+                    
+                        {% for dia in report_data.detalle_dias %}
+                        <div class="list-group-item py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-light rounded p-2 text-center border" style="min-width: 65px;">
+                                        <span class="d-block fw-bold small text-uppercase text-muted">{{ dia.fecha|date:"M" }}</span>
+                                        <span class="d-block fw-bold fs-5">{{ dia.fecha|date:"d" }}</span>
+                                    </div>
+                                    
+                                    <div>
+                                        <h6 class="mb-1 fw-bold text-capitalize">{{ dia.fecha|date:"l d" }}</h6>
+                                        
+                                        <div class="mb-1">
+                                            {% if dia.resumen_dia.c5 > 0 %}<span class="badge bg-secondary text-light border border-light me-1">{{ dia.resumen_dia.c5 }}x 5kg</span>{% endif %}
+                                            {% if dia.resumen_dia.c11 > 0 %}<span class="badge bg-secondary text-light border border-light me-1">{{ dia.resumen_dia.c11 }}x 11kg</span>{% endif %}
+                                            {% if dia.resumen_dia.c15 > 0 %}<span class="badge bg-secondary text-light border border-light me-1">{{ dia.resumen_dia.c15 }}x 15kg</span>{% endif %}
+                                            {% if dia.resumen_dia.c45 > 0 %}<span class="badge bg-secondary text-light border border-light me-1">{{ dia.resumen_dia.c45 }}x 45kg</span>{% endif %}
+                                            
+                                            {% if dia.resumen_dia.cat5 > 0 %}<span class="badge bg-primary text-light me-1">{{ dia.resumen_dia.cat5 }}x Cat5</span>{% endif %}
+                                            {% if dia.resumen_dia.cat15 > 0 %}<span class="badge bg-primary text-light me-1">{{ dia.resumen_dia.cat15 }}x Cat15</span>{% endif %}
+                                            {% if dia.resumen_dia.ultra > 0 %}<span class="badge bg-info text-dark me-1">{{ dia.resumen_dia.ultra }}x Ultra</span>{% endif %}
+
+                                            {% if dia.resumen_dia.defectuosos > 0 %}
+                                                <span class="badge bg-danger text-white border border-danger me-1" title="Cilindros Defectuosos">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>{{ dia.resumen_dia.defectuosos }} Def.
+                                                </span>
+                                            {% endif %}
+                                        </div>
+
+                                        <span class="badge bg-dark rounded-pill">Total: {{ dia.total_kg|floatformat:0 }} Kg</span>
+                                        
+                                        {% if dia.total_anticipo_dia > 0 %}
+                                            <span class="badge ms-1" style="background-color: #6610f2;">Anticipo: ${{ dia.total_anticipo_dia|intcomma }}</span>
+                                        {% endif %}
+
+                                        {% if dia.turnos|length > 1 %}
+                                            <span class="badge bg-warning text-dark rounded-pill ms-1"><i class="fas fa-layer-group me-1"></i>{{ dia.turnos|length }} Turnos</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    {% if dia.total_balance == 0 %}
+                                        <span class="d-block fw-bold text-success fs-5">$0</span>
+                                        <span class="small text-success fw-bold"><i class="fas fa-check-circle"></i> Cuadrado</span>
+                                    {% elif dia.total_balance > 0 %}
+                                        <span class="d-block fw-bold text-primary fs-5">+${{ dia.total_balance|intcomma }}</span>
+                                        <span class="small text-primary fw-bold">Sobrante</span>
+                                    {% else %}
+                                        <span class="d-block fw-bold text-danger fs-5">-${{ dia.total_balance|stringformat:"d"|slice:"1:"|intcomma }}</span>
+                                        <span class="small text-danger fw-bold">Faltante</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if dia.turnos|length > 1 %}
+                            <div class="mt-3 ms-4">
+                                <small class="text-muted fw-bold text-uppercase mb-2 d-block ps-1" style="font-size: 0.75rem;">
+                                    <i class="fas fa-stream me-1"></i> Desglose de turnos:
+                                </small>
+                                
+                                <div class="row g-2">
+                                    {% for turno in dia.turnos %}
+                                    <div class="col-12">
+                                        <div class="border rounded p-2 bg-white shadow-sm turno-card position-relative" style="border-left-color: {% if turno.bodega == '1221' %}#0d6efd{% else %}#198754{% endif %};">
+                                            
+                                            <div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1">
+                                                <span class="fw-bold small text-secondary">
+                                                    <i class="fas fa-warehouse me-1"></i>Bodega {{ turno.bodega }}
+                                                </span>
+                                                
+                                                <span class="fw-bold small {% if turno.diferencia == 0 %}text-success{% elif turno.diferencia > 0 %}text-primary{% else %}text-danger{% endif %}">
+                                                    {% if turno.diferencia == 0 %}
+                                                        <i class="fas fa-check me-1"></i>Ok
+                                                    {% elif turno.diferencia > 0 %}
+                                                        +${{ turno.diferencia|intcomma }}
+                                                    {% else %}
+                                                        -${{ turno.diferencia|stringformat:"d"|slice:"1:"|intcomma }}
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="small text-muted" style="line-height: 1.2;">
+                                                    {% if turno.gas_5kg > 0 %} <span class="me-1 fw-bold text-dark">{{ turno.gas_5kg }}x5</span> {% endif %}
+                                                    {% if turno.gas_11kg > 0 %} <span class="me-1 fw-bold text-dark">{{ turno.gas_11kg }}x11</span> {% endif %}
+                                                    {% if turno.gas_15kg > 0 %} <span class="me-1 fw-bold text-dark">{{ turno.gas_15kg }}x15</span> {% endif %}
+                                                    {% if turno.gas_45kg > 0 %} <span class="me-1 fw-bold text-dark">{{ turno.gas_45kg }}x45</span> {% endif %}
+                                                    
+                                                    {% if turno.gasc_5kg > 0 %} <span class="me-1 fw-bold text-primary">{{ turno.gasc_5kg }}xC5</span> {% endif %}
+                                                    {% if turno.gasc_15kg > 0 %} <span class="me-1 fw-bold text-primary">{{ turno.gasc_15kg }}xC15</span> {% endif %}
+                                                    {% if turno.gas_ultra_15kg > 0 %} <span class="me-1 fw-bold text-info">{{ turno.gas_ultra_15kg }}xU</span> {% endif %}
+                                                    
+                                                    {% if turno.cilindros_defectuosos > 0 %} 
+                                                        <span class="badge bg-danger text-white" style="font-size: 0.65rem;">{{ turno.cilindros_defectuosos }} Def</span> 
+                                                    {% endif %}
+
+                                                    {% if turno.monto_anticipo > 0 %}
+                                                        <span class="badge" style="background-color: #6610f2; font-size: 0.65rem;">Ant: ${{ turno.monto_anticipo|intcomma }}</span>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <span class="badge bg-light text-dark border ms-2">
+                                                    {{ turno.total_kilos|floatformat:0 }} Kg
+                                                </span>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow border-0 position-sticky" style="top: 20px;">
+                {% if report_data %}
+                
+                <div class="card-body py-4">
+                    <h6 class="text-uppercase text-muted fw-bold mb-3 text-center">Resumen del Mes</h6>
+
+                    <div class="text-center mb-4">
+                        <span class="d-block text-secondary small fw-bold">TOTAL VENDIDO</span>
+                        <h3 class="fw-bold text-dark"><i class="fas fa-weight-hanging text-secondary me-2"></i>{{ report_data.total_kilos|intcomma }} Kg</h3>
+                    </div>
+
+                    <div class="mb-4">
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold">
+                                <span>Tipo Cilindro</span>
+                                <span>Cant.</span>
+                            </li>
+                            {% if report_data.detalle_fisico.c5 > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Lipigas 5kg</span> <span class="badge bg-secondary rounded-pill">{{ report_data.detalle_fisico.c5 }}</span>
+                            </li>
+                            {% endif %}
+                            {% if report_data.detalle_fisico.c11 > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Lipigas 11kg</span> <span class="badge bg-secondary rounded-pill">{{ report_data.detalle_fisico.c11 }}</span>
+                            </li>
+                            {% endif %}
+                            {% if report_data.detalle_fisico.c15 > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Lipigas 15kg</span> <span class="badge bg-secondary rounded-pill">{{ report_data.detalle_fisico.c15 }}</span>
+                            </li>
+                            {% endif %}
+                            {% if report_data.detalle_fisico.c45 > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Lipigas 45kg</span> <span class="badge bg-secondary rounded-pill">{{ report_data.detalle_fisico.c45 }}</span>
+                            </li>
+                            {% endif %}
+                            
+                            {% if report_data.detalle_fisico.cat5 > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span class="text-primary">Catalítico 5kg</span> <span class="badge bg-primary rounded-pill">{{ report_data.detalle_fisico.cat5 }}</span>
+                            </li>
+                            {% endif %}
+                            {% if report_data.detalle_fisico.cat15 > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span class="text-primary">Catalítico 15kg</span> <span class="badge bg-primary rounded-pill">{{ report_data.detalle_fisico.cat15 }}</span>
+                            </li>
+                            {% endif %}
+                            {% if report_data.detalle_fisico.ultra > 0 %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span class="text-info text-dark">Ultra 15kg</span> <span class="badge bg-info text-dark rounded-pill">{{ report_data.detalle_fisico.ultra }}</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+
+                        {% if report_data.detalle_fisico.defectuosos > 0 %}
+                            <div class="mt-2 p-2 bg-danger text-white rounded d-flex justify-content-between align-items-center shadow-sm">
+                                <span class="fw-bold small"><i class="fas fa-exclamation-triangle me-2"></i>Cilindros Defectuosos</span>
+                                <span class="badge bg-white text-danger fw-bold fs-6">{{ report_data.detalle_fisico.defectuosos }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center position-relative">
+                        {% if user.is_superuser %}
+                        <a href="{% url 'configurar_comisiones' %}" class="btn btn-sm btn-outline-secondary border-0 position-absolute top-0 end-0" title="Configurar Tarifas">
+                            <i class="fas fa-cog"></i>
+                        </a>
+                        {% endif %}
+
+                        <span class="d-block text-success small fw-bold mb-2 text-uppercase">COMISIÓN ESTIMADA</span>
+                        <h1 class="display-4 fw-bold text-success mb-0">
+                            ${{ report_data.total_comision|intcomma }}
+                        </h1>
+
+                        <hr class="my-4">
+
+                        <span class="d-block text-secondary small fw-bold mb-2">BALANCE ACUMULADO</span>
+                        <h1 class="display-4 fw-bold {% if report_data.balance < 0 %}text-danger{% elif report_data.balance > 0 %}text-primary{% else %}text-success{% endif %} mb-0">
+                            {% if report_data.balance > 0 %}+{% endif %}${{ report_data.balance|intcomma }}
+                        </h1>
+                        <div class="alert alert-{% if report_data.balance < 0 %}danger{% elif report_data.balance > 0 %}primary{% else %}text-success{% endif %} mt-3 mb-3 rounded-pill py-2">
+                            {% if report_data.balance < 0 %}
+                                <i class="fas fa-times-circle me-2"></i> <strong>FALTANTE</strong>
+                            {% elif report_data.balance > 0 %}
+                                <i class="fas fa-arrow-up me-2"></i> <strong>SOBRANTE</strong>
+                            {% else %}
+                                <i class="fas fa-check-circle me-2"></i> <strong>CUADRADO</strong>
+                            {% endif %}
+                        </div>
+
+                        {% if report_data.total_anticipos > 0 %}
+                            <hr class="my-4">
+                            <span class="d-block text-secondary small fw-bold mb-2">TOTAL ANTICIPOS</span>
+                            <h1 class="display-4 fw-bold mb-0" style="color: #6610f2;">
+                                ${{ report_data.total_anticipos|intcomma }}
+                            </h1>
+                        {% endif %}
+
+                        <hr class="my-4">
+
+                        <button type="button" class="btn btn-outline-primary w-100 rounded-pill mb-2" data-bs-toggle="modal" data-bs-target="#modalTablaGeneral">
+                            <i class="fas fa-table me-2"></i> Visualización Tabla General
+                        </button>
+
+                        <a href="{% url 'exportar_pdf_mensual' %}?trabajador_id={{ trabajador_seleccionado.id }}&fecha_seleccionada={{ fecha_seleccionada }}" class="btn btn-danger w-100 rounded-pill" target="_blank">
+                            <i class="fas fa-file-pdf me-2"></i> Descargar Resumen PDF
+                        </a>
+
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="card-body text-center py-5 text-muted">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <p>Selecciona un trabajador para ver sus totales.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="modalTablaGeneral" tabindex="-1" aria-labelledby="modalTablaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="modalTablaLabel">
+                    <i class="fas fa-calendar-alt me-2"></i>Tabla General - {{ fecha_seleccionada }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                {% if not trabajador_seleccionado %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">Por favor selecciona un trabajador para ver la tabla.</p>
+                    </div>
+                {% else %}
+                <div class="table-responsive">
+                    <table class="table table-bordered tabla-compacta text-center mb-0">
+                        <thead class="text-dark">
+                            <tr>
+                                <th class="py-2" style="background-color: #ffff00;">Día</th>
+                                <th class="py-2" style="background-color: #ffff00;">05 kg</th>
+                                <th class="py-2" style="background-color: #ffff00;">11 kg</th>
+                                <th class="py-2" style="background-color: #ffff00;">15 kg</th>
+                                <th class="py-2" style="background-color: #ffff00;">45 kg</th>
+                                <th class="py-2" style="background-color: #ffff00;">05 Cat</th>
+                                <th class="py-2" style="background-color: #ffff00;">15 Cat</th>
+                                <th class="py-2" style="background-color: #ffff00;">Ultra</th>
+                                <th class="py-2 text-danger" style="background-color: #ffff00;">Defect.</th>
+                                <th class="py-2" style="background-color: #ffff00;">Total Kg</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dia, cant in report_data.tabla_general.items %}
+                            <tr class="{% if cant.total_kg > 0 %}fw-bold{% else %}text-muted{% endif %}">
+                                <td class="bg-light fw-bold">{{ dia }}</td>
+                                
+                                <td>{% if cant.c5 > 0 %}{{ cant.c5 }}{% endif %}</td>
+                                <td>{% if cant.c11 > 0 %}{{ cant.c11 }}{% endif %}</td>
+                                <td>{% if cant.c15 > 0 %}{{ cant.c15 }}{% endif %}</td>
+                                <td>{% if cant.c45 > 0 %}{{ cant.c45 }}{% endif %}</td>
+                                <td>{% if cant.cat5 > 0 %}{{ cant.cat5 }}{% endif %}</td>
+                                <td>{% if cant.cat15 > 0 %}{{ cant.cat15 }}{% endif %}</td>
+                                <td>{% if cant.ultra > 0 %}{{ cant.ultra }}{% endif %}</td>
+                                <td class="text-danger">{% if cant.defectuosos > 0 %}{{ cant.defectuosos }}{% endif %}</td>
+                                
+                                <td class="bg-light border-start border-2 text-dark">
+                                    {% if cant.total_kg > 0 %}{{ cant.total_kg|floatformat:0 }}{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="fw-bold" style="border-top: 3px solid #333;">
+                            <tr>
+                                <td class="bg-warning text-dark">TOTAL</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.c5 }}</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.c11 }}</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.c15 }}</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.c45 }}</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.cat5 }}</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.cat15 }}</td>
+                                <td class="bg-warning text-dark">{{ report_data.detalle_fisico.ultra }}</td>
+                                <td class="bg-warning text-danger">{{ report_data.detalle_fisico.defectuosos }}</td>
+                                <td class="bg-warning text-dark border-start border-2">{{ report_data.total_kilos|floatformat:0 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

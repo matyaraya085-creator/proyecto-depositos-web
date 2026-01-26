@@ -1,5 +1,6 @@
 {% extends 'gestion/core/base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -7,40 +8,82 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark">🧑‍💼 Gestión de Trabajadores</h2>
-            <p class="text-muted">Administra el personal y sus asignaciones de bodega.</p>
+            <p class="text-muted">Administra el personal activo e inactivo.</p>
         </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregar">
-            <i class="fas fa-plus-circle"></i> Nuevo Trabajador
-        </button>
+        
+        <div class="d-flex gap-2">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregar">
+                <i class="fas fa-plus-circle"></i> Nuevo Trabajador
+            </button>
+        </div>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-white border-bottom-0 pt-3">
+            <h5 class="fw-bold text-success"><i class="fas fa-user-check"></i> Trabajadores Activos</h5>
+        </div>
         <div class="card-body p-0">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light text-dark">
                     <tr>
                         <th class="ps-4">Nombre Completo</th>
-                        <th>Bodega Asignada</th>
+                        <th>RUT</th>
+                        <th>Bodega</th>
+                        <th>Tipo</th>
                         <th class="text-end pe-4">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for t in trabajadores %}
+                    {% for t in trabajadores_activos %}
                     <tr>
-                        <td class="ps-4 fw-bold text-secondary">{{ t.nombre }}</td>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ t.nombre }}</div>
+                            <small class="text-muted">{{ t.cargo|default:"Sin cargo" }}</small>
+                        </td>
+                        <td class="text-secondary fw-bold">
+                            <span class="rut-formato">{{ t.rut|default:"" }}</span>
+                            {% if not t.rut %}<small class="text-muted fst-italic">--</small>{% endif %}
+                        </td>
                         <td>
-                            <span class="badge bg-info text-dark">
-                                {{ t.get_bodega_asignada_display }}
-                            </span>
+                            {% if t.bodega_asignada == '1221' %}
+                                <span class="badge bg-primary">Bodega 1221</span>
+                            {% elif t.bodega_asignada == '1225' %}
+                                <span class="badge bg-success">Bodega 1225</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Ambas</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.tipo == 'INTERNO' %}
+                                <span class="badge bg-secondary">Interno</span>
+                            {% else %}
+                                <span class="badge bg-dark">Externo</span>
+                            {% endif %}
                         </td>
                         <td class="text-end pe-4">
-                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar" 
+                            <button class="btn btn-sm btn-outline-primary me-1" 
                                     data-bs-toggle="modal" 
-                                    data-bs-target="#modalEditar"
+                                    data-bs-target="#modalEditarCompleto"
                                     data-id="{{ t.id }}"
                                     data-nombre="{{ t.nombre }}"
-                                    data-bodega="{{ t.bodega_asignada }}">
-                                <i class="fas fa-edit"></i>
+                                    data-rut="{{ t.rut|default:'' }}"
+                                    data-tipo="{{ t.tipo }}"
+                                    data-fecha="{{ t.fecha_ingreso|date:'Y-m-d' }}"
+                                    data-cargo="{{ t.cargo|default:'' }}"
+                                    data-bodega="{{ t.bodega_asignada }}"
+                                    data-facturacion="{{ t.bodega_facturacion|default:'' }}"
+                                    data-sueldo="{{ t.sueldo_base }}"
+                                    data-extra="{{ t.valor_hora_extra }}"
+                                    data-afp="{{ t.afp.id|default:'' }}"
+                                    data-salud="{{ t.salud.id|default:'' }}"
+                                    data-asignacion="{{ t.tiene_asignacion_familiar|yesno:'SI,NO' }}"
+                                    data-cargas="{{ t.cargas_familiares }}"
+                                    data-activo="{{ t.activo|yesno:'SI,NO' }}"
+                                    data-filtro="{{ t.filtro_trabajador|yesno:'SI,NO' }}">
+                                <i class="fas fa-edit"></i> Editar
                             </button>
                             
                             <form method="POST" action="{% url 'eliminar_trabajador' t.id %}" style="display: inline;">
@@ -54,10 +97,53 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <i class="fas fa-users-slash fa-2x mb-3"></i><br>
-                            No hay trabajadores registrados.
+                        <td colspan="5" class="text-center py-4 text-muted">No hay trabajadores activos.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 opacity-75">
+        <div class="card-header bg-light border-bottom-0 pt-3">
+            <h5 class="fw-bold text-secondary"><i class="fas fa-archive"></i> Trabajadores Archivados (Inactivos)</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0 bg-light">
+                <thead class="text-muted">
+                    <tr>
+                        <th class="ps-4">Nombre Completo</th>
+                        <th>RUT</th>
+                        <th>Bodega</th>
+                        <th>Tipo</th>
+                        <th class="text-end pe-4">Restaurar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in trabajadores_inactivos %}
+                    <tr>
+                        <td class="ps-4 text-muted">
+                            <div class="fw-bold">{{ t.nombre }}</div>
+                            <small>{{ t.cargo|default:"Sin cargo" }}</small>
                         </td>
+                        <td class="font-monospace small text-muted">
+                            <span class="rut-formato">{{ t.rut|default:"" }}</span>
+                        </td>
+                        <td class="text-muted">{{ t.bodega_asignada }}</td>
+                        <td class="text-muted small">{{ t.tipo }}</td>
+                        <td class="text-end pe-4">
+                            <form method="POST" action="{% url 'restaurar_trabajador' t.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success text-white fw-bold">
+                                    <i class="fas fa-undo-alt"></i> Restaurar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-3 text-muted">No hay trabajadores archivados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -71,60 +157,187 @@
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">➕ Nuevo Trabajador</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{% url 'agregar_trabajador' %}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nombre Completo</label>
-                        <input type="text" name="nombre" class="form-control" required placeholder="Ej: Juan Pérez">
+                        <input type="text" name="nombre" class="form-control" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Bodega Asignada</label>
-                        <select name="bodega" class="form-select" required>
-                            <option value="" selected disabled>Seleccione...</option>
-                            <option value="1221">Bodega 1221 (Manuel Peñafiel)</option>
-                            <option value="1225">Bodega 1225 (David Perry)</option>
-                            <option value="AMBAS">Ambas Bodegas</option>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tipo Trabajador</label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="INTERNO">Interno (Contrato)</option>
+                                <option value="EXTERNO">Externo (Fletero)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Bodega Asignada</label>
+                            <select name="bodega" id="addBodega" class="form-select" required>
+                                <option value="1221">Bodega 1221</option>
+                                <option value="1225">Bodega 1225</option>
+                                <option value="Ambos">Ambas Bodegas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="divFacturacionAgregar" class="mb-3 p-3 bg-light border rounded" style="display: none;">
+                        <label class="form-label fw-bold text-primary">¿En qué bodega factura/paga?</label>
+                        <select name="bodega_facturacion" class="form-select">
+                            <option value="1221">1221 (Manuel Peñafiel)</option>
+                            <option value="1225">1225 (David Perry)</option>
                         </select>
+                        <small class="text-muted">Requerido porque trabaja en ambas.</small>
+                    </div>
+                    
+                    <div class="alert alert-light border small">
+                        <i class="fas fa-info-circle"></i> "Habilitado en Filtros" estará <b>ACTIVADO</b> por defecto.
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="submit" class="btn btn-primary">Crear</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="modalEditarCompleto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg"> 
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title">✏️ Editar Trabajador</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-edit"></i> Ficha Completa del Trabajador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" id="formEditar">
+            
+            <form method="POST" id="formEditarCompleto">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre Completo</label>
-                        <input type="text" name="nombre" id="editNombre" class="form-control" required>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-secondary">Nombre</label>
+                            <input type="text" name="nombre" id="editNombre" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary">RUT</label>
+                            <input type="text" name="rut" id="editRut" class="form-control" placeholder="12345678-9">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-secondary">Ingreso</label>
+                            <input type="date" name="fecha_ingreso" id="editFecha" class="form-control">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Bodega Asignada</label>
-                        <select name="bodega" id="editBodega" class="form-select" required>
-                            <option value="1221">Bodega 1221 (Manuel Peñafiel)</option>
-                            <option value="1225">Bodega 1225 (David Perry)</option>
-                            <option value="AMBAS">Ambas Bodegas</option>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">Tipo Trabajador</label>
+                            <select name="tipo" id="editTipo" class="form-select">
+                                <option value="INTERNO">Interno (Contrato)</option>
+                                <option value="EXTERNO">Externo (Fletero)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">Cargo</label>
+                            <input type="text" name="cargo" id="editCargo" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-secondary">Bodega</label>
+                            <select name="bodega" id="editBodega" class="form-select">
+                                <option value="1221">Bodega 1221</option>
+                                <option value="1225">Bodega 1225</option>
+                                <option value="Ambos">Ambos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="divFacturacionEditar" class="mb-3 p-3 bg-light border rounded" style="display: none;">
+                        <label class="form-label fw-bold text-primary">Bodega de Facturación (Remuneraciones)</label>
+                        <select name="bodega_facturacion" id="editFacturacion" class="form-select">
+                            <option value="1221">1221 (Manuel Peñafiel)</option>
+                            <option value="1225">1225 (David Perry)</option>
                         </select>
                     </div>
+
+                    <hr>
+
+                    <div id="divRemuneracion">
+                        <h6 class="text-primary small fw-bold">DATOS REMUNERACIÓN (Solo Internos)</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-secondary">Sueldo Base ($)</label>
+                                <input type="number" name="sueldo_base" id="editSueldo" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-secondary">Valor Hora Extra ($)</label>
+                                <input type="number" name="valor_hora_extra" id="editExtra" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-secondary">AFP</label>
+                                <select name="afp" id="editAfp" class="form-select">
+                                    <option value="">Seleccione...</option>
+                                    {% for afp in afps %}
+                                        <option value="{{ afp.id }}">{{ afp.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-secondary">Salud</label>
+                                <select name="salud" id="editSalud" class="form-select">
+                                    <option value="">Seleccione...</option>
+                                    {% for salud in saluds %}
+                                        <option value="{{ salud.id }}">{{ salud.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-secondary">Asig. Familiar</label>
+                                <select name="tiene_asignacion" id="editAsignacion" class="form-select">
+                                    <option value="NO">NO</option>
+                                    <option value="SI">SI</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-secondary">N° Hijos</label>
+                                <input type="number" name="cargas" id="editCargas" class="form-control">
+                            </div>
+                        </div>
+                    </div> <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-dark mb-3"><i class="fas fa-cog"></i> Configuración Avanzada</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="checkActivo" name="activo" value="SI">
+                                        <label class="form-check-label fw-bold" for="checkActivo">¿Trabaja Actualmente?</label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Si se desmarca, pasará a la lista de "Archivados".</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="checkFiltro" name="filtro_trabajador" value="SI">
+                                        <label class="form-check-label fw-bold" for="checkFiltro">¿Habilitado en Filtros?</label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Marcar para que aparezca en selectores (Caja, Bonos, etc.).</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-warning fw-bold">Guardar Todo</button>
                 </div>
             </form>
         </div>
@@ -133,31 +346,109 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var modalEditar = document.getElementById('modalEditar');
+        var modalEditar = document.getElementById('modalEditarCompleto');
+        var tipoSelect = document.getElementById('editTipo');
+        var divRemuneracion = document.getElementById('divRemuneracion');
+
+        // Referencias para la lógica de "Ambas Bodegas"
+        var addBodega = document.getElementById('addBodega');
+        var divFacturacionAgregar = document.getElementById('divFacturacionAgregar');
         
+        var editBodega = document.getElementById('editBodega');
+        var divFacturacionEditar = document.getElementById('divFacturacionEditar');
+        
+        // --- 1. LÓGICA MODAL AGREGAR ---
+        addBodega.addEventListener('change', function() {
+            if (this.value === 'Ambos') {
+                divFacturacionAgregar.style.display = 'block';
+            } else {
+                divFacturacionAgregar.style.display = 'none';
+            }
+        });
+
+        // --- 2. LÓGICA MODAL EDITAR (BODEGA) ---
+        function toggleFacturacionEdit() {
+            if (editBodega.value === 'Ambos') {
+                divFacturacionEditar.style.display = 'block';
+            } else {
+                divFacturacionEditar.style.display = 'none';
+            }
+        }
+        editBodega.addEventListener('change', toggleFacturacionEdit);
+
+        // --- 3. LÓGICA REMUNERACIÓN (INTERNO/EXTERNO) ---
+        function toggleRemuneracion() {
+            if (tipoSelect.value === 'INTERNO') {
+                divRemuneracion.style.display = 'block';
+            } else {
+                divRemuneracion.style.display = 'none';
+            }
+        }
+        tipoSelect.addEventListener('change', toggleRemuneracion);
+        
+        // --- 4. FORMATO RUT ---
+        function formatearRutTabla() {
+            var elementos = document.querySelectorAll('.rut-formato');
+            elementos.forEach(function(el) {
+                var rutLimpio = el.innerText.replace(/[^0-9kK]/g, '');
+                if (rutLimpio.length > 1) {
+                    var cuerpo = rutLimpio.slice(0, -1);
+                    var dv = rutLimpio.slice(-1).toUpperCase();
+                    var cuerpoFormato = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    el.innerText = cuerpoFormato + '-' + dv;
+                }
+            });
+        }
+        formatearRutTabla();
+
+        // --- 5. CARGA DE DATOS MODAL EDITAR ---
         modalEditar.addEventListener('show.bs.modal', function (event) {
-            // Botón que activó el modal
             var button = event.relatedTarget;
             
-            // Extraer info de los atributos data-*
             var id = button.getAttribute('data-id');
             var nombre = button.getAttribute('data-nombre');
+            var rut = button.getAttribute('data-rut');
+            var tipo = button.getAttribute('data-tipo'); 
+            var fecha = button.getAttribute('data-fecha');
+            var cargo = button.getAttribute('data-cargo');
             var bodega = button.getAttribute('data-bodega');
+            var facturacion = button.getAttribute('data-facturacion'); // Nuevo dato
+            var sueldo = button.getAttribute('data-sueldo');
+            var extra = button.getAttribute('data-extra');
+            var afp = button.getAttribute('data-afp');
+            var salud = button.getAttribute('data-salud');
+            var asignacion = button.getAttribute('data-asignacion');
+            var cargas = button.getAttribute('data-cargas');
+            var activo = button.getAttribute('data-activo'); 
+            var filtro = button.getAttribute('data-filtro');
+
+            document.getElementById('editNombre').value = nombre;
+            document.getElementById('editRut').value = rut;
+            document.getElementById('editTipo').value = tipo; 
+            document.getElementById('editFecha').value = fecha;
+            document.getElementById('editCargo').value = cargo;
             
-            // Referencias a los inputs del modal
-            var inputNombre = document.getElementById('editNombre');
-            var inputBodega = document.getElementById('editBodega');
-            var form = document.getElementById('formEditar');
+            // Seteo de Bodegas
+            document.getElementById('editBodega').value = bodega;
+            document.getElementById('editFacturacion').value = facturacion;
 
-            // Asignar valores
-            inputNombre.value = nombre;
-            inputBodega.value = bodega;
+            document.getElementById('editSueldo').value = sueldo;
+            document.getElementById('editExtra').value = extra;
+            document.getElementById('editAfp').value = afp;
+            document.getElementById('editSalud').value = salud;
+            document.getElementById('editAsignacion').value = asignacion;
+            document.getElementById('editCargas').value = cargas;
 
-            // ACTUALIZACIÓN IMPORTANTE: 
-            // La URL ahora coincide con urls.py: /trabajadores/ID/editar/
+            document.getElementById('checkActivo').checked = (activo === 'SI');
+            document.getElementById('checkFiltro').checked = (filtro === 'SI');
+
+            // Ejecutar toggles visuales según los valores cargados
+            toggleRemuneracion();
+            toggleFacturacionEdit();
+
+            var form = document.getElementById('formEditarCompleto');
             form.action = "/trabajadores/" + id + "/editar/"; 
         });
     });
 </script>
-
 {% endblock %}

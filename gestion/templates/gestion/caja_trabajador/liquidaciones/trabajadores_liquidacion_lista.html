@@ -1,0 +1,240 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %} 
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 1300px;">
+    
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-0">
+                {% if bodega_id == '1221' %}
+                    <i class="fas fa-warehouse text-primary me-2"></i>Bodega 1221: Manuel Peñafiel
+                {% elif bodega_id == '1225' %}
+                    <i class="fas fa-warehouse text-primary me-2"></i>Bodega 1225: David Perry
+                {% else %}
+                    <i class="fas fa-warehouse text-primary me-2"></i>{{ nombre_bodega }}
+                {% endif %}
+            </h2>
+            <div class="d-flex align-items-center gap-2">
+                <p class="text-muted mb-0">Gestión de rendiciones diarias</p>
+                {% if esta_cerrado_global %}
+                    <span class="badge bg-danger"><i class="fas fa-lock me-1"></i>DÍA CERRADO GLOBALMENTE</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            
+            <form method="POST" class="d-flex align-items-center">
+                {% csrf_token %}
+                
+                {% if esta_cerrado_global %}
+                    {% if user.is_superuser %}
+                        <button type="submit" name="accion_global" value="abrir_dia" class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="return confirm('¿Seguro que quieres reabrir la bodega completa?');">
+                            <i class="fas fa-unlock me-1"></i> REABRIR DÍA
+                        </button>
+                    {% endif %}
+                    
+                {% else %}
+                    <button type="submit" name="accion_global" value="cerrar_dia" class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="return confirm('¿Confirmas el CIERRE GLOBAL de hoy? Todas las cajas individuales se cerrarán.');">
+                        <i class="fas fa-lock me-1"></i> CERRAR DÍA
+                    </button>
+                {% endif %}
+            </form>
+
+            <form method="GET" class="d-flex align-items-center bg-white p-2 rounded shadow-sm border">
+                <input type="hidden" name="bodega" value="{{ bodega_id }}">
+                <label class="fw-bold text-muted me-2 small text-uppercase"><i class="far fa-calendar-alt me-1"></i> Fecha:</label>
+                <input type="date" name="fecha" value="{{ fecha_str }}" 
+                       class="form-control border-0 bg-transparent fw-bold text-primary p-0" 
+                       style="width: 140px;"
+                       onchange="this.form.submit()">
+            </form>
+
+            <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left"></i> Menú
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        
+        <div class="col-lg-3 mb-4">
+            
+            <div class="card shadow-sm border-0 mb-3 {% if esta_cerrado_global %}bg-secondary{% else %}bg-primary{% endif %} text-white">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">
+                        {% if esta_cerrado_global %}
+                            <i class="fas fa-lock me-2"></i>Día Cerrado
+                        {% else %}
+                            <i class="fas fa-user-plus me-2"></i>Nuevo Turno
+                        {% endif %}
+                    </h5>
+                    
+                    {% if not esta_cerrado_global %}
+                        <p class="small opacity-75 mb-3">Selecciona un trabajador para iniciar su rendición del día.</p>
+                        <form action="{% url 'crear_rendicion_vacia' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="bodega_id" value="{{ bodega_id }}">
+                            <input type="hidden" name="fecha" value="{{ fecha_str }}">
+                            
+                            <div class="mb-3">
+                                <select name="trabajador_id" class="form-select border-0 shadow-none" required>
+                                    <option value="" selected disabled>-- Elegir Trabajador --</option>
+                                    {% for t in trabajadores_disponibles %}
+                                        <option value="{{ t.id }}">{{ t.nombre }}</option>
+                                    {% empty %}
+                                        <option disabled>Todos asignados hoy</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-light text-primary w-100 fw-bold shadow-sm">
+                                <i class="fas fa-plus-circle me-1"></i> Agregar a la Lista
+                            </button>
+                        </form>
+                    {% else %}
+                        <p class="small opacity-75 mb-0">La bodega está cerrada para esta fecha. Contacta al administrador si necesitas realizar cambios.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white fw-bold text-secondary">
+                    <i class="fas fa-chart-pie me-2"></i>Resumen del Día
+                </div>
+                <div class="card-body text-center">
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted small text-uppercase mb-1">Total Kilos Vendidos</h6>
+                        <h3 class="fw-bold text-dark mb-0">{{ total_kg_dia|floatformat:0 }} Kg</h3>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div>
+                        <h6 class="text-muted small text-uppercase mb-1">Balance de Caja</h6>
+                        
+                        {% if total_diferencia_dia == 0 %}
+                            <h2 class="fw-bold text-success mb-0">$0</h2>
+                            <span class="badge bg-success rounded-pill mt-2 px-3">
+                                <i class="fas fa-check-circle me-1"></i> Cuadrado
+                            </span>
+
+                        {% elif total_diferencia_dia > 0 %}
+                            <h2 class="fw-bold text-primary mb-0">+${{ total_diferencia_dia|intcomma }}</h2>
+                            <span class="badge bg-primary rounded-pill mt-2 px-3">
+                                <i class="fas fa-arrow-up me-1"></i> Sobrante
+                            </span>
+
+                        {% else %}
+                            <h2 class="fw-bold text-danger mb-0">-${{ total_diferencia_dia|stringformat:"d"|slice:"1:"|intcomma }}</h2>
+                            <span class="badge bg-danger rounded-pill mt-2 px-3">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Faltante
+                            </span>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-9">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-secondary">📋 Planilla de Trabajadores</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Trabajador</th>
+                                <th class="text-center">Kilos</th>
+                                <th class="text-end">Diferencia ($)</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rendiciones %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold me-3" style="width: 40px; height: 40px;">
+                                            {{ r.trabajador.nombre|slice:":1" }}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">{{ r.trabajador.nombre }}</h6>
+                                            {% if r.cerrado %}
+                                                <span class="badge bg-secondary" style="font-size: 0.7rem;"><i class="fas fa-lock me-1"></i>CERRADO</span>
+                                            {% else %}
+                                                <span class="text-success small"><i class="fas fa-circle me-1" style="font-size: 8px;"></i>Abierto</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center fw-bold text-secondary">{{ r.total_kilos|floatformat:0 }}</td>
+                                <td class="text-end">
+                                    {% if r.estado_dinero == "PENDIENTE" %}
+                                        <span class="text-muted">-</span>
+                                    {% elif r.diferencia == 0 %}
+                                        <span class="text-success fw-bold">$0</span>
+                                    {% elif r.diferencia > 0 %}
+                                        <span class="text-primary fw-bold">+ ${{ r.diferencia|intcomma }}</span>
+                                    {% else %}
+                                        <span class="text-danger fw-bold">- ${{ r.diferencia|stringformat:"d"|slice:"1:"|intcomma }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if r.estado_dinero == 'CUADRADO' %}
+                                        <span class="badge bg-success rounded-pill px-3">OK</span>
+                                    {% elif r.estado_dinero == 'PENDIENTE' %}
+                                        <span class="badge bg-light text-muted border rounded-pill px-3">Pendiente</span>
+                                    {% elif 'FALTANTE' in r.estado_dinero %}
+                                        <span class="badge bg-danger rounded-pill px-3">Faltante</span>
+                                    {% else %}
+                                        <span class="badge bg-primary rounded-pill px-3">Sobrante</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <a href="{% url 'form_rendicion_editar' r.id %}" class="btn btn-sm btn-outline-primary" title="Editar / Ver">
+                                            {% if r.cerrado or esta_cerrado_global %}
+                                                <i class="fas fa-eye"></i> Ver
+                                            {% else %}
+                                                <i class="fas fa-pen"></i> Editar
+                                            {% endif %}
+                                        </a>
+                                        
+                                        {% if not esta_cerrado_global %}
+                                            {% if user.is_superuser or not r.cerrado %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="if(confirm('¿Eliminar rendición de {{ r.trabajador.nombre }}?\n\nEsta acción no se puede deshacer.')) location.href='{% url 'eliminar_rendicion' r.id %}'">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <div class="opacity-50 mb-3"><i class="fas fa-clipboard-list fa-3x"></i></div>
+                                    <p class="mb-0">No hay trabajadores agregados para esta fecha.</p>
+                                    <p class="small">Usa el panel de la izquierda para agregar uno.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,328 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div style="width: 98%; max-width: 1400px; margin: 0 auto; padding-top: 20px; padding-bottom: 40px;">
+
+    <div class="header-lote-card" style="margin-bottom: 20px;">
+        <div class="header-info">
+            <h2 class="lote-title">
+                <i class="fas fa-calculator" style="color: var(--lipi-blue); margin-right: 10px;"></i>
+                Cálculo de Factura (Fletero)
+            </h2>
+            <div class="meta-row">
+                <div class="meta-item"><i class="fas fa-user"></i> {{ trabajador.nombre }}</div>
+                <div class="meta-item"><i class="far fa-calendar-alt"></i> Periodo: {{ mes }}/{{ anio }}</div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'nomina_externos' %}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Volver a Nómina
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" id="formCalculo">
+        {% csrf_token %}
+        
+        <input type="hidden" name="json_otros_descuentos" id="inputJsonOtros" value="{{ remu.json_otros_descuentos|default:'[]' }}">
+        
+        <div class="dashboard-card" style="margin-bottom: 25px; padding: 20px; transform: none !important; cursor: default; text-align: left; flex-direction: row; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 20px; flex: 1;">
+                <div style="background-color: #e9ecef; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #555;">
+                    <i class="fas fa-file-invoice" style="font-size: 1.5rem;"></i>
+                </div>
+                <div style="flex: 1; max-width: 400px;">
+                    <label style="font-weight: 700; color: #555; font-size: 0.9rem; display: block; margin-bottom: 5px;">
+                        NÚMERO DE FACTURA
+                    </label>
+                    <input type="text" name="nro_factura" class="form-control" 
+                           style="font-weight: 700; color: var(--lipi-blue); font-size: 1.1rem; border: 2px solid #ddd;" 
+                           placeholder="Ej: 1054" value="{{ remu.nro_factura|default:'' }}" required>
+                </div>
+            </div>
+            <div style="text-align: right; color: #888; font-size: 0.9rem;">
+                <i class="fas fa-info-circle"></i> Ingrese el número del documento tributario
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 48% 48%; gap: 4%; align-items: start;">
+
+            <div class="dashboard-card" style="align-items: stretch; text-align: left; padding: 0; overflow: hidden; transform: none !important; cursor: default;">
+                <div style="padding: 15px 20px; background-color: #f8f9fa; border-bottom: 1px solid #eee;">
+                    <h3 style="font-size: 1.1rem; font-weight: 700; color: #28a745; margin: 0;">
+                        <i class="fas fa-plus-circle me-2"></i> INGRESOS
+                    </h3>
+                </div>
+
+                <div style="padding: 20px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px 0;">
+                                <div style="font-weight: 600;">Venta de Cilindros</div>
+                                <div style="font-size: 0.8rem; color: #888;">Calculado autom. por rendiciones</div>
+                            </td>
+                            <td style="text-align: right; font-weight: 700;">
+                                $ {{ pago_cilindros|intcomma }}
+                            </td>
+                        </tr>
+                        
+                        <tr style="border-bottom: 2px solid #ddd;">
+                            <td style="padding: 12px 0;">
+                                <div style="font-weight: 600;">Asistencias Técnicas</div>
+                                <div style="font-size: 0.8rem; color: #888;">Devolución gastos al trabajador</div>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">$</span>
+                                    <input type="number" name="asistencia_tecnica" id="inp_asistencia" 
+                                           class="form-control text-end fw-bold border-start-0" 
+                                           value="{{ remu.asistencia_tecnica|default:0 }}" oninput="calcularTotales()">
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr style="background-color: #f1f8ff;">
+                            <td style="padding: 12px 10px; font-weight: 700; color: var(--lipi-blue);">SUBTOTAL NETO</td>
+                            <td style="padding: 12px 10px; text-align: right; font-weight: 800; color: var(--lipi-blue); font-size: 1.1rem;" id="txt_neto">$ 0</td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding: 12px 10px; color: #666;">(+) IVA (19%)</td>
+                            <td style="padding: 12px 10px; text-align: right; color: #666;" id="txt_iva">$ 0</td>
+                        </tr>
+
+                        <tr style="background-color: #28a745; color: white;">
+                            <td style="padding: 15px 10px; font-weight: 700;">TOTAL INGRESOS (Bruto)</td>
+                            <td style="padding: 15px 10px; text-align: right; font-weight: 800; font-size: 1.2rem;" id="txt_bruto">$ 0</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dashboard-card" style="align-items: stretch; text-align: left; padding: 0; overflow: hidden; transform: none !important; cursor: default;">
+                <div style="padding: 15px 20px; background-color: #f8f9fa; border-bottom: 1px solid #eee;">
+                    <h3 style="font-size: 1.1rem; font-weight: 700; color: #dc3545; margin: 0;">
+                        <i class="fas fa-minus-circle me-2"></i> DESCUENTOS
+                    </h3>
+                </div>
+
+                <div style="padding: 20px;">
+                    
+                    <div style="background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 8px; padding: 10px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-weight: 600; color: #a00;">Anticipos</span>
+                            <span style="font-size: 0.85rem; color: #666;">Base DB: ${{ anticipo_db|intcomma }}</span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted">Extra manual: $</span>
+                            <input type="number" name="anticipo_extra" id="inp_anticipo_extra" 
+                                   class="form-control text-end fw-bold text-danger" 
+                                   value="{{ remu.anticipo_extra|default:0 }}" oninput="calcularTotales()">
+                        </div>
+                    </div>
+
+                    <div style="background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 8px; padding: 10px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-weight: 600; color: #a00;">Faltantes de Caja</span>
+                            <span style="font-size: 0.85rem; color: #666;">Base DB: ${{ faltante_db|intcomma }}</span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted">Extra manual: $</span>
+                            <input type="number" name="faltante_extra" id="inp_faltante_extra" 
+                                   class="form-control text-end fw-bold text-danger" 
+                                   value="{{ remu.faltante_extra|default:0 }}" oninput="calcularTotales()">
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 2px dashed #eee; padding-top: 15px; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <label style="font-weight: 700; font-size: 0.9rem; color: #555;">Otros Descuentos Específicos</label>
+                            <button type="button" class="btn-workers" onclick="agregarFilaGasto()" 
+                                    style="padding: 2px 10px; font-size: 0.8rem; min-height: auto;">
+                                <i class="fas fa-plus"></i> Agregar
+                            </button>
+                        </div>
+
+                        <div id="contenedorGastos">
+                            </div>
+                        
+                        <div style="text-align: right; margin-top: 5px; font-size: 0.85rem; color: #dc3545; font-weight: 700;">
+                            Total Otros: <span id="txt_total_otros">$0</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; border-top: 2px solid #dc3545; padding-top: 10px; display: flex; justify-content: space-between;">
+                        <span style="font-weight: 700; color: #dc3545;">TOTAL DESCUENTOS</span>
+                        <span style="font-weight: 800; color: #dc3545; font-size: 1.1rem;" id="txt_total_descuentos">$ 0</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <div class="dashboard-card" style="margin-top: 20px; padding: 30px; transform: none !important; cursor: default; text-align: center;">
+            <h4 style="font-size: 1rem; text-transform: uppercase; color: #888; margin-bottom: 10px;">Resultado Final de Pago</h4>
+            
+            <h1 style="font-size: 3rem; font-weight: 800; margin: 0;" id="txt_final_pagar">$ 0</h1>
+            
+            <div id="badge_estado_pago" class="status-pill open" style="display: inline-block; font-size: 1rem; padding: 5px 20px; margin-top: 10px;">
+                Calculando...
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="submit" class="btn-workers" style="font-size: 1.2rem; padding: 12px 40px; border: none; cursor: pointer;">
+                    <i class="fas fa-save me-2"></i> GUARDAR CÁLCULO
+                </button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    // --- VARIABLES INICIALES ---
+    const pagoCilindrosBase = parseInt("{{ pago_cilindros }}") || 0;
+    const anticipoDB = parseInt("{{ anticipo_db }}") || 0;
+    const faltanteDB = parseInt("{{ faltante_db }}") || 0;
+
+    // --- LISTA DINÁMICA ---
+    const contenedorGastos = document.getElementById('contenedorGastos');
+    const inputJsonOtros = document.getElementById('inputJsonOtros');
+    let listaOtros = [];
+
+    try { listaOtros = JSON.parse(inputJsonOtros.value); } catch (e) { listaOtros = []; }
+
+    function renderizarGastos() {
+        contenedorGastos.innerHTML = '';
+        let totalOtros = 0;
+
+        listaOtros.forEach((item, index) => {
+            const monto = parseInt(item.monto) || 0;
+            totalOtros += monto;
+
+            const row = document.createElement('div');
+            row.style.cssText = "display: flex; gap: 5px; margin-bottom: 8px; align-items: center;";
+            row.innerHTML = `
+                <div style="flex: 2;">
+                    <input type="text" class="form-control form-control-sm" 
+                           placeholder="Detalle (Ej: Préstamo)" 
+                           value="${item.desc}" 
+                           oninput="actualizarGasto(${index}, 'desc', this.value)">
+                </div>
+                <div style="flex: 1;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-danger">$</span>
+                        <input type="number" class="form-control border-start-0 fw-bold text-danger" 
+                               placeholder="0" 
+                               value="${monto === 0 ? '' : monto}" 
+                               oninput="actualizarGasto(${index}, 'monto', this.value)">
+                    </div>
+                </div>
+                <div>
+                    <button type="button" onclick="eliminarGasto(${index})" 
+                            style="border: none; background: none; color: #dc3545; cursor: pointer;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+            contenedorGastos.appendChild(row);
+        });
+
+        // Actualizar visuales de la lista
+        document.getElementById('txt_total_otros').innerText = '$ ' + totalOtros.toLocaleString('es-CL');
+        document.getElementById('txt_total_otros').dataset.valor = totalOtros;
+        
+        // Guardar en input hidden
+        inputJsonOtros.value = JSON.stringify(listaOtros);
+        
+        // Recalcular todo el formulario
+        calcularTotales();
+    }
+
+    window.agregarFilaGasto = function() { listaOtros.push({ monto: 0, desc: '' }); renderizarGastos(); };
+    window.eliminarGasto = function(index) { listaOtros.splice(index, 1); renderizarGastos(); };
+    window.actualizarGasto = function(index, campo, valor) { listaOtros[index][campo] = valor; renderizarGastos(); };
+
+
+    // --- CÁLCULO GENERAL ---
+    function calcularTotales() {
+        // 1. INGRESOS
+        const asistencia = parseInt(document.getElementById('inp_asistencia').value) || 0;
+        const subtotalNeto = pagoCilindrosBase + asistencia;
+        const iva = Math.round(subtotalNeto * 0.19);
+        const totalBruto = subtotalNeto + iva;
+
+        // Actualizar UI Ingresos
+        document.getElementById('txt_neto').innerText = '$ ' + subtotalNeto.toLocaleString('es-CL');
+        document.getElementById('txt_iva').innerText = '$ ' + iva.toLocaleString('es-CL');
+        document.getElementById('txt_bruto').innerText = '$ ' + totalBruto.toLocaleString('es-CL');
+
+        // 2. DESCUENTOS
+        const anticipoExtra = parseInt(document.getElementById('inp_anticipo_extra').value) || 0;
+        const faltanteExtra = parseInt(document.getElementById('inp_faltante_extra').value) || 0;
+        
+        // Lista dinámica
+        const totalOtros = parseInt(document.getElementById('txt_total_otros').dataset.valor) || 0;
+
+        const totalAnticipos = anticipoDB + anticipoExtra;
+        const totalFaltantes = faltanteDB + faltanteExtra;
+
+        // Suma final descuentos (quitamos el prestamo estático)
+        const totalDescuentos = totalAnticipos + totalFaltantes + totalOtros;
+
+        // Actualizar UI Descuentos
+        document.getElementById('txt_total_descuentos').innerText = '$ ' + totalDescuentos.toLocaleString('es-CL');
+
+        // 3. FINAL
+        const aPagar = totalBruto - totalDescuentos;
+        const txtFinal = document.getElementById('txt_final_pagar');
+        const badge = document.getElementById('badge_estado_pago');
+
+        txtFinal.innerText = '$ ' + aPagar.toLocaleString('es-CL');
+
+        if (aPagar > 0) {
+            txtFinal.style.color = '#28a745'; // Verde
+            badge.className = 'status-pill closed';
+            badge.style.backgroundColor = '#d4edda'; badge.style.color = '#155724';
+            badge.innerText = "A PAGAR";
+        } else if (aPagar < 0) {
+            txtFinal.style.color = '#dc3545'; // Rojo
+            badge.className = 'status-pill open'; // Usamos estilo alerta
+            badge.style.backgroundColor = '#f8d7da'; badge.style.color = '#721c24';
+            badge.innerText = "DEUDA PENDIENTE DEL MES";
+        } else {
+            txtFinal.style.color = '#856404'; // Amarillo/Café
+            badge.className = 'status-pill';
+            badge.style.backgroundColor = '#fff3cd'; badge.style.color = '#856404';
+            badge.innerText = "SIN PAGO ($0)";
+        }
+    }
+
+    // Inicializar
+    document.addEventListener("DOMContentLoaded", function() {
+        renderizarGastos(); // Esto llamará a calcularTotales internamente
+    });
+
+</script>
+
+<style>
+    /* Estilos base */
+    .header-lote-card { background: white; border-radius: 12px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .lote-title { font-size: 1.4rem; font-weight: 700; color: #333; margin: 0; display: flex; align-items: center; }
+    .meta-row { display: flex; gap: 15px; color: #666; font-size: 0.85rem; margin-top: 5px; }
+    .btn-back { text-decoration: none; color: #777; font-weight: 600; padding: 8px 15px; border-radius: 6px; background: #f8f9fa; border: 1px solid #ddd; font-size: 0.9rem; }
+    
+    .dashboard-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+    .btn-workers {
+        background-color: var(--lipi-blue); color: white; border-radius: 50px; padding: 8px 18px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+    }
+    .btn-workers:hover { background-color: var(--lipi-yellow); color: var(--lipi-blue); }
+
+    .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+</style>
+
+{% endblock %}
