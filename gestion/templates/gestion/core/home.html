@@ -1,6 +1,33 @@
 {% extends 'gestion/core/base.html' %}
 
 {% block content %}
+    <style>
+        /* SOLO cambiamos el borde de la tarjeta.
+           El ícono principal (.card-icon) se mantiene con su color original.
+        */
+
+        /* Borde Amarillo - Precaución */
+        .dashboard-card.status-warning {
+            border: 2px solid #ffc107 !important; 
+        }
+
+        /* Borde Rojo - Peligro */
+        .dashboard-card.status-danger {
+            border: 2px solid #dc3545 !important; 
+        }
+
+        /* Borde Negro - Vencido */
+        .dashboard-card.status-dark {
+            border: 2px solid #000000 !important; 
+        }
+        
+        /* Estilo para la etiqueta pequeña (Pill) en caso de Vencido (Negro) */
+        .dashboard-card.status-dark .alert-pill {
+            background-color: #000000;
+            color: #fff;
+        }
+    </style>
+
     <h2 class="dashboard-title">Gestión Administrativa</h2>
     <p class="dashboard-subtitle">Selecciona un módulo para comenzar a trabajar</p>
 
@@ -18,20 +45,43 @@
             <span class="card-desc">Control individual por cada trabajador</span>
         </a>
 
-        <a href="{% url 'menu_remuneraciones' %}" class="dashboard-card">
-            <div class="card-icon-circle"><i class="fas fa-file-invoice-dollar card-icon"></i></div>
-            <span class="card-title">Remuneraciones</span>
-            <span class="card-desc">Gestión de pagos y liquidaciones</span>
+        <a href="{% url 'menu_clientes' %}" class="dashboard-card">
+            <div class="card-icon-circle"><i class="fas fa-user-tie card-icon"></i></div>
+            <span class="card-title">Clientes Crédito</span>
+            <span class="card-desc">Control y manejo de información de clientes crédito</span>
         </a>
 
-        <a href="{% url 'menu_camionetas' %}" class="dashboard-card status-success">
-            <div class="card-icon-circle"><i class="fas fa-truck-pickup card-icon"></i></div>
-            <span class="card-title">Flota de Camionetas</span>
-            <span class="card-desc">Mantenciones y documentación</span>
-            <div class="alert-pill">
-                <i class="fas fa-check-circle"></i> Todo al día
+        {% if user.is_superuser %}
+            <a href="{% url 'menu_remuneraciones' %}" class="dashboard-card">
+                <div class="card-icon-circle"><i class="fas fa-file-invoice-dollar card-icon"></i></div>
+                <span class="card-title">Remuneraciones</span>
+                <span class="card-desc">Gestión de pagos y liquidaciones</span>
+            </a>
+        {% else %}
+            <div class="dashboard-card item-locked">
+                <div class="card-icon-circle"><i class="fas fa-lock card-icon"></i></div>
+                <span class="card-title">Remuneraciones</span>
+                <span class="card-desc">Acceso Restringido (Admin)</span>
             </div>
-        </a>
+        {% endif %}
+
+        {% if user.is_superuser %}
+            <a href="{% url 'menu_camionetas' %}" class="dashboard-card status-{{ flota_status_class }}">
+                <div class="card-icon-circle"><i class="fas fa-truck-pickup card-icon"></i></div>
+                <span class="card-title">Flota de Camionetas</span>
+                <span class="card-desc">Mantenciones y documentación</span>
+                
+                <div class="alert-pill">
+                    <i class="{{ flota_icon }}"></i> {{ flota_text }}
+                </div>
+            </a>
+        {% else %}
+            <div class="dashboard-card item-locked">
+                <div class="card-icon-circle"><i class="fas fa-lock card-icon"></i></div>
+                <span class="card-title">Flota de Camionetas</span>
+                <span class="card-desc">Acceso Restringido (Admin)</span>
+            </div>
+        {% endif %}
 
     </div>
 {% endblock %}

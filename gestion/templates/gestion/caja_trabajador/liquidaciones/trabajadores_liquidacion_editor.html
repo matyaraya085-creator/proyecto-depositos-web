@@ -1,0 +1,476 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 1200px;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+        <div>
+            <h2 class="fw-bold mb-0">
+                {% if rendicion.cerrado %}
+                    <i class="fas fa-lock text-danger me-2"></i>Rendición Cerrada
+                {% else %}
+                    <i class="fas fa-pen-to-square text-primary me-2"></i>Editando Rendición
+                    <span id="auto-save-status" class="fs-6 ms-3 fw-bold" style="transition: color 0.3s;"></span>
+                {% endif %}
+            </h2>
+            <p class="text-muted mb-0">
+                Trabajador: <span class="text-dark fw-bold">{{ trabajador.nombre }}</span> | 
+                Fecha: <span class="text-dark fw-bold">{{ rendicion.fecha|date:"d/m/Y" }}</span>
+            </p>
+        </div>
+        
+        <div class="d-flex gap-2">
+            {% if rendicion.cerrado and user.is_superuser %}
+                <form method="POST" onsubmit="return confirm('¿Seguro que deseas REABRIR esta rendición?');">
+                    {% csrf_token %}
+                    <button type="submit" name="accion" value="reabrir" class="btn btn-warning fw-bold">
+                        <i class="fas fa-unlock me-2"></i> REABRIR CAJA
+                    </button>
+                </form>
+            {% endif %}
+
+            <a href="{% url 'dashboard_bodega' %}?bodega={{ bodega_actual }}&fecha={{ fecha_str }}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="fas fa-arrow-left me-2"></i> Volver a Bodega
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" id="rendicionForm">
+        {% csrf_token %}
+        
+        <input type="hidden" name="detalle_gastos" id="inputDetalleGastos" value="{{ rendicion.detalle_gastos|default:'[]' }}">
+
+        <div class="row">
+            <div class="col-lg-7 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-gas-pump me-2"></i>Venta de Cilindros</h5>
+                        <small>Cálculo de Kilos</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr class="text-secondary small text-uppercase">
+                                    <th class="ps-4">Tipo de Gas</th>
+                                    <th class="text-center" width="130">Cant. Vendida</th>
+                                    <th class="text-end pe-4">Total Kg</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="ps-4 fw-bold">Lipigas 5kg <span class="badge bg-secondary ms-1">5kg</span></td>
+                                    <td><input type="number" name="gas_5kg" value="{% if rendicion.gas_5kg %}{{ rendicion.gas_5kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold">Lipigas 11kg <span class="badge bg-secondary ms-1">11kg</span></td>
+                                    <td><input type="number" name="gas_11kg" value="{% if rendicion.gas_11kg %}{{ rendicion.gas_11kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="11" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold">Lipigas 15kg <span class="badge bg-secondary ms-1">15kg</span></td>
+                                    <td><input type="number" name="gas_15kg" value="{% if rendicion.gas_15kg %}{{ rendicion.gas_15kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold">Lipigas 45kg <span class="badge bg-secondary ms-1">45kg</span></td>
+                                    <td><input type="number" name="gas_45kg" value="{% if rendicion.gas_45kg %}{{ rendicion.gas_45kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="45" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">05 Cat <span class="badge bg-primary ms-1">5kg</span></td>
+                                    <td><input type="number" name="gasc_5kg" value="{% if rendicion.gasc_5kg %}{{ rendicion.gasc_5kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="5" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">15 Cat <span class="badge bg-primary ms-1">15kg</span></td>
+                                    <td><input type="number" name="gasc_15kg" value="{% if rendicion.gasc_15kg %}{{ rendicion.gasc_15kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-4 fw-bold text-info">Ultra <span class="badge bg-info text-dark ms-1">15kg</span></td>
+                                    <td><input type="number" name="gas_ultra_15kg" value="{% if rendicion.gas_ultra_15kg %}{{ rendicion.gas_ultra_15kg }}{% endif %}" class="form-control text-center bg-light input-cilindro" data-peso="15" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}></td>
+                                    <td class="text-end pe-4 text-muted fw-bold"><span class="subtotal-kg">0</span> kg</td>
+                                </tr>
+                                <tr class="bg-danger-subtle">
+                                    <td class="ps-4 fw-bold text-danger"><i class="fas fa-exclamation-circle me-1"></i> Defectuosos <span class="badge bg-danger ms-1">N/A</span></td>
+                                    <td>
+                                        <input type="number" name="cilindros_defectuosos" value="{% if rendicion.cilindros_defectuosos %}{{ rendicion.cilindros_defectuosos }}{% endif %}" class="form-control text-center bg-white border-danger text-danger input-cilindro" data-peso="0" min="0" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                    </td>
+                                    <td class="text-end pe-4 text-muted small fst-italic pt-3">No suma kg</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="bg-light border-top">
+                                <tr>
+                                    <td colspan="2" class="text-end fw-bold pt-3">TOTAL KILOS COMISIÓN:</td>
+                                    <td class="text-end pe-4 fw-bold fs-4 pt-3 text-primary">
+                                        <span id="displayTotalKilos">0</span> kg
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Rendición de Valores</h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="mb-3 position-relative">
+                            <label class="form-label fw-bold text-dark">1. Total Venta del Día</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white text-success">$</span>
+                                <input type="number" id="inputTotalVenta" name="total_venta" value="{% if rendicion.total_venta %}{{ rendicion.total_venta }}{% endif %}" class="form-control fw-bold input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h6 class="text-muted text-uppercase small fw-bold mb-3">Descuentos y Gastos</h6>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-secondary small">Prepago</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="inputVales" name="monto_vales" value="{% if rendicion.monto_vales %}{{ rendicion.monto_vales }}{% endif %}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-secondary small">Transbank (Tarjetas)</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="inputTransbank" name="monto_transbank" value="{% if rendicion.monto_transbank %}{{ rendicion.monto_transbank }}{% endif %}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-secondary small">Crédito Empresa</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="inputCredito" name="monto_credito" value="{% if rendicion.monto_credito %}{{ rendicion.monto_credito }}{% endif %}" class="form-control input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-light rounded border mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold text-warning-emphasis small mb-0"><i class="fas fa-receipt me-1"></i> Lista de Gastos</label>
+                                {% if not rendicion.cerrado %}
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold" onclick="agregarFilaGasto()">
+                                        <i class="fas fa-plus me-1"></i> Agregar
+                                    </button>
+                                {% endif %}
+                            </div>
+
+                            <div id="contenedorGastos"></div>
+                            
+                            <div class="text-end mt-2 pt-2 border-top border-secondary-subtle">
+                                <small class="fw-bold text-muted">Total Gastos: <span id="displayTotalGastos">$0</span></small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-primary">Anticipo</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-primary text-white border-primary fw-bold">$</span>
+                                <input type="number" id="inputAnticipo" name="monto_anticipo" value="{{ rendicion.monto_anticipo|default:0 }}" 
+                                       class="form-control border-primary input-plata fw-bold text-primary" placeholder="0" 
+                                       {% if rendicion.cerrado %}disabled{% endif %}>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-secondary d-flex justify-content-between align-items-center py-2 mb-4">
+                            <span class="small fw-bold">El trabajador debería entregar en Efectivo:</span>
+                            <span class="fw-bold fs-5" id="displayEfectivoEsperado">$0</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-success">💵 Efectivo Real Entregado</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-success text-white border-success">$</span>
+                                <input type="number" id="inputEfectivoReal" name="efectivo_entregado" value="{% if rendicion.efectivo_entregado %}{{ rendicion.efectivo_entregado }}{% endif %}" class="form-control fw-bold border-success input-plata" placeholder="0" {% if rendicion.cerrado %}disabled{% endif %}>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="card text-center border-0 shadow-sm" id="cardEstadoFlujo" style="background-color: #f8f9fa;"> 
+                    <div class="card-body py-4">
+                        <h6 class="text-uppercase fw-bold mb-2" id="tituloEstado">Diferencia</h6>
+                        <h2 class="display-4 fw-bold mb-0" id="displayDiferencia">$0</h2>
+                        <div id="badgeEstado" class="badge bg-secondary rounded-pill px-4 mt-3 py-2 fs-6">Pendiente</div>
+                    </div>
+                </div>
+
+                {% if not rendicion.cerrado %}
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" name="accion" value="guardar" class="btn btn-primary btn-lg rounded-pill shadow">
+                            <i class="fas fa-save me-2"></i> Guardar Cambios
+                        </button>
+                        <button type="submit" name="accion" value="cerrar" onclick="return confirm('¿Estás seguro de CERRAR esta rendición? No podrás editarla después.');" class="btn btn-danger btn-lg rounded-pill shadow">
+                            <i class="fas fa-lock me-2"></i> Cerrar Caja
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger text-center mt-4">
+                        <i class="fas fa-lock me-2"></i> <strong>Caja Cerrada</strong>
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // ==========================================
+        // 0. CONFIGURACIÓN AUTO-GUARDADO (AJAX)
+        // ==========================================
+        const statusSpan = document.getElementById('auto-save-status');
+        const formRendicion = document.getElementById('rendicionForm');
+        const urlAutoSave = "{% url 'api_auto_guardar_rendicion' rendicion.id %}";
+        let timeoutGuardado = null;
+
+        function autoGuardar() {
+            {% if rendicion.cerrado and not user.is_superuser %} return; {% endif %}
+
+            if(statusSpan) {
+                statusSpan.style.color = '#e67e22';
+                statusSpan.innerHTML = '<i class="fas fa-sync fa-spin me-1"></i> Guardando...';
+            }
+
+            const inputDetalleGastos = document.getElementById('inputDetalleGastos');
+            if(inputDetalleGastos) {
+                inputDetalleGastos.value = JSON.stringify(listaGastos);
+            }
+
+            const formData = new FormData(formRendicion);
+
+            fetch(urlAutoSave, {
+                method: 'POST',
+                body: formData,
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'ok') {
+                    if(statusSpan) {
+                        statusSpan.style.color = '#198754';
+                        statusSpan.innerHTML = '<i class="fas fa-check me-1"></i> Guardado';
+                        setTimeout(() => { statusSpan.innerHTML = ""; }, 2000);
+                    }
+                } else {
+                    console.error("Error guardando:", data);
+                    if(statusSpan) {
+                        statusSpan.style.color = '#dc3545';
+                        statusSpan.innerText = "Error al guardar";
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error de red:', error);
+                if(statusSpan) {
+                    statusSpan.style.color = '#dc3545';
+                    statusSpan.innerText = "Error de conexión";
+                }
+            });
+        }
+
+        function triggerAutoGuardado() {
+            if(statusSpan) statusSpan.innerHTML = "...";
+            clearTimeout(timeoutGuardado);
+            timeoutGuardado = setTimeout(autoGuardar, 800);
+        }
+
+        // ==========================================
+        // 1. LÓGICA DE KILOS
+        // ==========================================
+        const inputsCilindros = document.querySelectorAll('.input-cilindro');
+        const displayTotalKilos = document.getElementById('displayTotalKilos');
+
+        function calcularKilos() {
+            let totalKilos = 0;
+            inputsCilindros.forEach(input => {
+                const cantidad = parseFloat(input.value) || 0;
+                // Si es defectuoso tendrá data-peso="0", por lo que sumará 0
+                const peso = parseFloat(input.dataset.peso) || 0;
+                const subtotal = cantidad * peso;
+                // Solo intentamos actualizar subtotal si existe la celda en la fila
+                const celdaSubtotal = input.closest('tr').querySelector('.subtotal-kg');
+                if (celdaSubtotal) {
+                    celdaSubtotal.textContent = subtotal;
+                }
+                totalKilos += subtotal;
+            });
+            displayTotalKilos.textContent = totalKilos.toLocaleString('es-CL');
+        }
+        
+        inputsCilindros.forEach(input => {
+            input.addEventListener('input', function() {
+                calcularKilos();
+                triggerAutoGuardado();
+            });
+        });
+        
+        // No es necesario listener especial para defectuosos porque ahora tiene la clase input-cilindro
+
+        calcularKilos();
+
+        // ==========================================
+        // 2. LÓGICA DE GASTOS
+        // ==========================================
+        const contenedorGastos = document.getElementById('contenedorGastos');
+        const inputDetalleGastos = document.getElementById('inputDetalleGastos');
+        const displayTotalGastos = document.getElementById('displayTotalGastos');
+        
+        window.listaGastos = [];
+        try { window.listaGastos = JSON.parse(inputDetalleGastos.value); } catch (e) { window.listaGastos = []; }
+
+        function actualizarSumasVisuales() {
+            let totalG = 0;
+            window.listaGastos.forEach(g => { totalG += (parseInt(g.monto) || 0); });
+            displayTotalGastos.textContent = '$ ' + totalG.toLocaleString('es-CL');
+            inputDetalleGastos.value = JSON.stringify(window.listaGastos);
+            calcularPlatas(); 
+            triggerAutoGuardado();
+        }
+
+        function renderizarGastos() {
+            contenedorGastos.innerHTML = '';
+            window.listaGastos.forEach((gasto, index) => {
+                const monto = parseInt(gasto.monto) || 0;
+                const row = document.createElement('div');
+                row.className = 'row g-1 mb-2 align-items-center';
+                row.innerHTML = `
+                    <div class="col-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control fw-bold text-warning-emphasis" 
+                                   value="${monto === 0 ? '' : monto}" placeholder="0"
+                                   oninput="actualizarGastoData(${index}, 'monto', this.value)" 
+                                   {% if rendicion.cerrado %}disabled{% endif %}>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <input type="text" class="form-control form-control-sm" 
+                               value="${gasto.desc}" placeholder="Detalle (Ej: Colación)" 
+                               oninput="actualizarGastoData(${index}, 'desc', this.value)" 
+                               {% if rendicion.cerrado %}disabled{% endif %}>
+                    </div>
+                    <div class="col-2 text-end">
+                        {% if not rendicion.cerrado %}
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="eliminarGasto(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                `;
+                contenedorGastos.appendChild(row);
+            });
+            if (window.listaGastos.length === 0) {
+                contenedorGastos.innerHTML = '<p class="text-muted small text-center mb-0 fst-italic">Sin gastos registrados</p>';
+            }
+            // Actualizar suma visual inicial sin guardar
+            let totalG = 0;
+            window.listaGastos.forEach(g => { totalG += (parseInt(g.monto) || 0); });
+            displayTotalGastos.textContent = '$ ' + totalG.toLocaleString('es-CL');
+            calcularPlatas();
+        }
+
+        window.agregarFilaGasto = function() { window.listaGastos.push({ monto: 0, desc: '' }); renderizarGastos(); triggerAutoGuardado(); };
+        window.eliminarGasto = function(index) { window.listaGastos.splice(index, 1); renderizarGastos(); triggerAutoGuardado(); };
+        window.actualizarGastoData = function(index, campo, valor) { window.listaGastos[index][campo] = valor; actualizarSumasVisuales(); };
+
+        // ==========================================
+        // 3. LÓGICA DE PLATAS
+        // ==========================================
+        const inTotalVenta = document.getElementById('inputTotalVenta');
+        const inVales = document.getElementById('inputVales');
+        const inTransbank = document.getElementById('inputTransbank');
+        const inCredito = document.getElementById('inputCredito');
+        const inAnticipo = document.getElementById('inputAnticipo'); 
+        const inEfectivoReal = document.getElementById('inputEfectivoReal');
+        
+        const dispEsperado = document.getElementById('displayEfectivoEsperado');
+        const dispDiferencia = document.getElementById('displayDiferencia');
+        const cardEstado = document.getElementById('cardEstadoFlujo');
+        const badgeEstado = document.getElementById('badgeEstado');
+        
+        function calcularPlatas() {
+            const totalVenta = parseInt(inTotalVenta.value) || 0;
+            const vales = parseInt(inVales.value) || 0;
+            const transbank = parseInt(inTransbank.value) || 0;
+            const credito = parseInt(inCredito.value) || 0;
+            const anticipo = parseInt(inAnticipo.value) || 0; 
+            const efectivoReal = parseInt(inEfectivoReal.value) || 0;
+
+            let totalGastos = 0;
+            window.listaGastos.forEach(g => totalGastos += (parseInt(g.monto) || 0));
+
+            // Fórmula actualizada con anticipo
+            const efectivoEsperado = totalVenta - (vales + transbank + credito + totalGastos + anticipo);
+            
+            dispEsperado.textContent = '$ ' + efectivoEsperado.toLocaleString('es-CL');
+            const diferencia = efectivoReal - efectivoEsperado;
+            
+            // Visual
+            dispDiferencia.className = 'display-4 fw-bold mb-0';
+            cardEstado.classList.remove('bg-light', 'bg-danger-subtle', 'bg-success-subtle', 'bg-warning-subtle', 'bg-info-subtle');
+            badgeEstado.className = 'badge rounded-pill px-4 mt-3 py-2 fs-6';
+
+            if (totalVenta === 0 && efectivoReal === 0 && totalGastos === 0 && anticipo === 0) {
+                cardEstado.style.backgroundColor = '#f8f9fa';
+                badgeEstado.classList.add('bg-secondary');
+                badgeEstado.textContent = 'Pendiente';
+                dispDiferencia.textContent = '$0';
+            } 
+            else if (diferencia === 0) {
+                cardEstado.style.backgroundColor = '#d1e7dd';
+                badgeEstado.classList.add('bg-success');
+                badgeEstado.textContent = '✨ Cuadrado Perfecto';
+                dispDiferencia.classList.add('text-success');
+                dispDiferencia.textContent = '$0';
+            } 
+            else if (diferencia < 0) {
+                cardEstado.style.backgroundColor = '#f8d7da'; 
+                badgeEstado.classList.add('bg-danger');
+                badgeEstado.textContent = '⚠️ Faltante';
+                dispDiferencia.textContent = '- $ ' + Math.abs(diferencia).toLocaleString('es-CL');
+                dispDiferencia.classList.add('text-danger');
+            } 
+            else {
+                cardEstado.style.backgroundColor = '#cff4fc';
+                badgeEstado.classList.add('bg-primary');
+                badgeEstado.textContent = '💰 Sobrante';
+                dispDiferencia.textContent = '+ $ ' + Math.abs(diferencia).toLocaleString('es-CL');
+                dispDiferencia.classList.add('text-primary');
+            }
+        }
+
+        const inputsPlata = document.querySelectorAll('.input-plata');
+        inputsPlata.forEach(input => {
+            input.addEventListener('input', function() {
+                calcularPlatas();
+                triggerAutoGuardado();
+            });
+        });
+
+        // INICIALIZACIÓN
+        renderizarGastos(); 
+        calcularPlatas();   
+    });
+</script>
+
+{% endblock %}

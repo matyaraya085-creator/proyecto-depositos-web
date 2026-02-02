@@ -1,0 +1,134 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div style="width: 98%; max-width: 1000px; margin: 0 auto; padding-top: 30px; padding-bottom: 40px;">
+
+    <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="margin: 0; font-weight: 800; color: var(--lipi-blue);">
+                <i class="fas fa-file-invoice-dollar" style="margin-right: 10px;"></i>
+                Resumen de Pago
+            </h2>
+            <div style="margin-top: 5px; color: #666;">
+                Factura N°: <strong style="color: #333;">{{ remu.nro_factura|default:"Pendiente" }}</strong> | 
+                Trabajador: <strong>{{ remu.trabajador.nombre }}</strong>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 0.9rem; text-transform: uppercase; color: #888; font-weight: 700;">Monto a Pagar</div>
+            <div style="font-size: 2.2rem; font-weight: 800; {% if remu.monto_total_pagar < 0 %}color: #dc3545;{% else %}color: #28a745;{% endif %}">
+                $ {{ remu.monto_total_pagar|intcomma }}
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        
+        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div style="background: #e6f9ed; padding: 15px 20px; border-bottom: 1px solid #c3e6cb;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #155724; font-weight: 700;">INGRESOS</h3>
+            </div>
+            <div style="padding: 20px;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #555;">Pago Cilindros</td>
+                        <td style="text-align: right; font-weight: 600;">$ {{ remu.pago_cilindros|intcomma }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #555;">Asistencia Técnica</td>
+                        <td style="text-align: right; font-weight: 600;">$ {{ remu.asistencia_tecnica|intcomma }}</td>
+                    </tr>
+                    <tr style="border-top: 1px solid #eee;">
+                        <td style="padding: 8px 0; font-weight: 700; color: var(--lipi-blue);">Subtotal Neto</td>
+                        <td style="text-align: right; font-weight: 700; color: var(--lipi-blue);">$ {{ remu.subtotal_neto|intcomma }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #777;">+ IVA (19%)</td>
+                        <td style="text-align: right; color: #777;">$ {{ remu.iva|intcomma }}</td>
+                    </tr>
+                    <tr style="border-top: 2px solid #ddd; font-size: 1.1rem;">
+                        <td style="padding-top: 10px; font-weight: 800;">TOTAL HABERES</td>
+                        <td style="text-align: right; font-weight: 800;">$ {{ remu.total_bruto|intcomma }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div style="background: #fff5f5; padding: 15px 20px; border-bottom: 1px solid #f5c6cb;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #721c24; font-weight: 700;">DESCUENTOS</h3>
+            </div>
+            <div style="padding: 20px;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #555;">
+                            Anticipos <span style="font-size: 0.75rem; color: #999;">(Base: ${{ remu.anticipo_base|intcomma }} + Extra: ${{ remu.anticipo_extra|intcomma }})</span>
+                        </td>
+                        <td style="text-align: right; font-weight: 600; color: #dc3545;">
+                            $ {{ remu.anticipo_base|add:remu.anticipo_extra|intcomma }}
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding: 8px 0; color: #555;">
+                            Faltantes Caja <span style="font-size: 0.75rem; color: #999;">(Base: ${{ remu.faltante_base|intcomma }} + Extra: ${{ remu.faltante_extra|intcomma }})</span>
+                        </td>
+                        <td style="text-align: right; font-weight: 600; color: #dc3545;">
+                            $ {{ remu.faltante_base|add:remu.faltante_extra|intcomma }}
+                        </td>
+                    </tr>
+
+                    {% if remu.prestamo > 0 %}
+                    <tr>
+                        <td style="padding: 8px 0; color: #555;">Préstamo Empresa</td>
+                        <td style="text-align: right; font-weight: 600; color: #dc3545;">$ {{ remu.prestamo|intcomma }}</td>
+                    </tr>
+                    {% endif %}
+
+                    {% for otro in detalle_otros %}
+                    <tr>
+                        <td style="padding: 8px 0; color: #555; font-style: italic;">{{ otro.desc }}</td>
+                        <td style="text-align: right; font-weight: 600; color: #dc3545;">$ {{ otro.monto|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr style="border-top: 2px solid #ddd; font-size: 1.1rem;">
+                        <td style="padding-top: 10px; font-weight: 800;">TOTAL DESCUENTOS</td>
+                        <td style="text-align: right; font-weight: 800; color: #dc3545;">$ {{ remu.total_descuentos|intcomma }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div style="margin-top: 30px; display: flex; justify-content: center; gap: 20px;">
+        <a href="{% url 'nomina_externos' %}" class="btn-workers" style="background: #6c757d; border-color: #6c757d;">
+            <i class="fas fa-arrow-left"></i> Volver al Menú
+        </a>
+        
+        <a href="{% url 'calcular_remuneracion_externa' remu.trabajador.id %}?mes={{ remu.mes }}&anio={{ remu.anio }}" class="btn-workers">
+            <i class="fas fa-edit"></i> Editar Cálculo
+        </a>
+
+        <button onclick="window.print()" class="btn-workers" style="background: #17a2b8; border-color: #17a2b8;">
+            <i class="fas fa-print"></i> Imprimir Comprobante
+        </button>
+    </div>
+
+</div>
+
+<style>
+    .btn-workers {
+        background-color: var(--lipi-blue); color: white; border-radius: 50px; padding: 10px 25px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; border: 2px solid transparent; cursor: pointer;
+    }
+    .btn-workers:hover { transform: translateY(-2px); opacity: 0.9; }
+
+    @media print {
+        .btn-workers, .header-lote-card { display: none !important; }
+        body { background: white; }
+    }
+</style>
+{% endblock %}

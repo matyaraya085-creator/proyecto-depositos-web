@@ -332,3 +332,31 @@ body {
     align-items: center;
     margin-top: auto; /* Esto asegura que el footer siempre baje */
 }
+
+/* --- ESTILOS PARA ELEMENTOS BLOQUEADOS --- */
+.item-locked {
+    background-color: #e9ecef !important; /* Gris claro */
+    color: #adb5bd !important; /* Texto gris */
+    pointer-events: none; /* Evita que se pueda hacer clic */
+    box-shadow: none !important;
+    border: 1px solid #dee2e6 !important;
+    transform: none !important; /* Evita el efecto de movimiento */
+    cursor: not-allowed;
+}
+
+.item-locked .card-icon-circle {
+    background-color: #dee2e6 !important; /* Círculo gris */
+}
+
+.item-locked .card-icon {
+    color: #6c757d !important; /* Ícono gris oscuro */
+}
+
+/* Para el botón del header */
+.btn-locked {
+    background-color: #e9ecef !important;
+    color: #adb5bd !important;
+    border-color: #dee2e6 !important;
+    pointer-events: none;
+    box-shadow: none !important;
+}

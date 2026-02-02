@@ -1,0 +1,80 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+    <div class="row align-items-center mb-5 mt-4">
+        
+        <div class="col-md-8">
+            <h2 class="dashboard-title" style="margin: 0;">Gestión de Flujo por Trabajador</h2>
+            <p style="color: var(--text-gray); margin: 5px 0 0;">Control individual de cuentas, asignaciones y métricas</p>
+        </div>
+
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{% url 'home' %}" class="btn-workers" style="
+                background-color: var(--lipi-blue, #0d6efd); 
+                color: white; 
+                padding: 10px 24px; 
+                text-decoration: none; 
+                border-radius: 50px; 
+                display: inline-flex; 
+                align-items: center; 
+                gap: 10px; 
+                white-space: nowrap; 
+                transition: transform 0.2s;
+                font-weight: 500;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+        </div>
+        
+    </div>
+
+    <div class="dashboard-grid" style="justify-content: center; gap: 20px;">
+
+        <a href="{% url 'dashboard_bodega' %}?bodega=1221" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
+                <i class="fas fa-warehouse card-icon" style="color: #FFD43B;"></i>
+            </div>
+            <span class="card-title">Bodega 1221</span>
+            <span class="card-desc">Manuel Peñafiel</span>
+        </a>
+
+        <a href="{% url 'dashboard_bodega' %}?bodega=1225" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
+                <i class="fas fa-warehouse card-icon" style="color: #FFD43B;"></i>
+            </div>
+            <span class="card-title">Bodega 1225</span>
+            <span class="card-desc">David Perry</span>
+        </a>
+
+        <a href="{% url 'reporte_mensual_trabajador' %}" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);">
+                <i class="fas fa-calendar-alt card-icon" style="color: #FFD43B;"></i>
+            </div>
+            <span class="card-title">Reporte Mensual</span>
+            <span class="card-desc">Histórico por Chofer</span>
+        </a>
+
+        <a href="{% url 'estadisticas_globales' %}" class="dashboard-card">
+            <div class="card-icon-circle" style="background-color: var(--lipi-blue, #0d6efd);"> 
+                <i class="fas fa-chart-pie card-icon" style="color: #FFD43B;"></i>
+            </div>
+            <span class="card-title">Análisis Global</span>
+            <span class="card-desc">Estadísticas y KPIs</span>
+        </a>
+
+    </div>
+
+<style>
+    .btn-workers:hover {
+        transform: scale(1.05);
+        opacity: 0.95;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+</style>
+
+{% endblock %}

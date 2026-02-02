@@ -1,0 +1,236 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 1400px;">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 mt-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-0">📊 Análisis de Datos</h2>
+            <p class="text-muted mb-0">Métricas de rendimiento y control de caja</p>
+        </div>
+        
+        <form method="GET" class="d-flex gap-2 bg-white p-2 rounded shadow-sm">
+            
+            <select name="bodega" class="form-select border-0 bg-light fw-bold" style="width: 150px;" onchange="this.form.submit()">
+                <option value="">🏠 Todas</option>
+                <option value="1221" {% if bodega_seleccionada == '1221' %}selected{% endif %}>Bodega 1221</option>
+                <option value="1225" {% if bodega_seleccionada == '1225' %}selected{% endif %}>Bodega 1225</option>
+            </select>
+            
+            <select name="mes" class="form-select border-0 bg-light fw-bold" style="width: 140px;" onchange="this.form.submit()">
+                {% for num, nombre in meses_disponibles %}
+                <option value="{{ num }}" {% if num == mes_actual %}selected{% endif %}>
+                    {{ nombre }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <select name="anio" class="form-select border-0 bg-light fw-bold" style="width: 100px;" onchange="this.form.submit()">
+                {% for a in anios_disponibles %}
+                <option value="{{ a }}" {% if a == anio_actual %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+            
+        </form>
+
+        <a href="{% url 'menu_trabajadores' %}" class="btn btn-outline-secondary rounded-pill">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase opacity-75 small fw-bold">Venta Total (Kilos)</h6>
+                    <h2 class="display-5 fw-bold mb-0">{{ kpi_kilos|intcomma }} Kg</h2>
+                    <small>En el periodo seleccionado</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted small fw-bold">Dinero Movido (Venta)</h6>
+                    <h2 class="display-5 fw-bold text-dark mb-0">${{ kpi_dinero|intcomma }}</h2>
+                    <small class="text-success"><i class="fas fa-chart-line"></i> Flujo bruto</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted small fw-bold">Balance de Caja (Neto)</h6>
+                    <h2 class="display-5 fw-bold {% if kpi_balance < 0 %}text-danger{% else %}text-success{% endif %} mb-0">
+                        {% if kpi_balance > 0 %}+{% endif %}${{ kpi_balance|intcomma }}
+                    </h2>
+                    <small class="text-muted">Suma de Faltantes y Sobrantes</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold text-secondary">
+                    <i class="fas fa-weight-hanging me-2"></i>Evolución Diaria de Venta (Kg)
+                </div>
+                <div class="card-body">
+                    <canvas id="chartKilos" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold text-secondary">
+                    <i class="fas fa-pie-chart me-2"></i>Calidad de Rendiciones
+                </div>
+                <div class="card-body position-relative">
+                    <canvas id="chartStatus" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold text-secondary">
+                    <i class="fas fa-wallet me-2"></i>Comportamiento de Caja (Faltantes vs Sobrantes)
+                </div>
+                <div class="card-body">
+                    <canvas id="chartBalance" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm mb-5">
+                <div class="card-header bg-white fw-bold text-secondary py-3">
+                    <i class="fas fa-list-ol me-2"></i>Ranking de Faltantes (Ordenado por Deuda)
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-uppercase small text-muted">
+                            <tr>
+                                <th class="ps-4">Posición</th>
+                                <th>Trabajador</th>
+                                <th class="text-center">Kilos Vendidos</th>
+                                <th class="text-end pe-4">Balance Acumulado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in ranking %}
+                            <tr>
+                                <td class="ps-4 text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">{{ item.trabajador__nombre }}</td>
+                                <td class="text-center">{{ item.total_kilos_vendidos|floatformat:0 }} Kg</td>
+                                <td class="text-end pe-4">
+                                    {% if item.total_diferencia == 0 %}
+                                        <span class="badge bg-success rounded-pill px-3">Cuadrado</span>
+                                    {% elif item.total_diferencia > 0 %}
+                                        <span class="text-primary fw-bold">+${{ item.total_diferencia|intcomma }}</span>
+                                    {% else %}
+                                        <span class="text-danger fw-bold fs-5">-${{ item.total_diferencia|stringformat:"d"|slice:"1:"|intcomma }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No hay datos en este periodo.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const labels = {{ chart_labels|safe }};
+        const dataKilos = {{ chart_kilos|safe }};
+        const dataBalance = {{ chart_balance|safe }};
+        const dataStatus = {{ chart_estados|safe }}; 
+
+        // 1. Gráfico de Kilos
+        new Chart(document.getElementById('chartKilos'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Kilos Vendidos',
+                    data: dataKilos,
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)', 
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        // 2. Gráfico de Estado (Dona)
+        new Chart(document.getElementById('chartStatus'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Cuadrado', 'Faltante', 'Sobrante'],
+                datasets: [{
+                    data: dataStatus,
+                    backgroundColor: ['#198754', '#dc3545', '#0d6efd'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '70%',
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // 3. Gráfico de Balance (Línea)
+        new Chart(document.getElementById('chartBalance'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Balance ($)',
+                    data: dataBalance,
+                    borderColor: '#6c757d',
+                    backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: function(context) {
+                        var value = context.dataset.data[context.dataIndex];
+                        return value < 0 ? '#dc3545' : '#198754';
+                    },
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { callback: function(value) { return '$' + value; } } }
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}

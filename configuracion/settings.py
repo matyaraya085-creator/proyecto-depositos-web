@@ -10,26 +10,38 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ==============================================================================
-# CONFIGURACIÓN DE SEGURIDAD
+# CONFIGURACIÓN INTELIGENTE (RENDER VS LOCAL)
 # ==============================================================================
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-wen=v2c$auxqc%spa_!8)fpxq!nlud0wo&4@f%-7+*-c00y1cq"
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# En tu PC será True. En Render debes configurar la variable DEBUG = 'False'
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-
-ALLOWED_HOSTS = [
-    '127.0.0.1',  # Localhost
-    'localhost',  # Localhost
-]
-
-# Configuración automática para Render.com
+# Detectamos si estamos en Render
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+if RENDER_EXTERNAL_HOSTNAME:
+    # --- ESTAMOS EN RENDER (Producción) ---
+    print("🌍 MODO: PRODUCCIÓN (Render)")
+    DEBUG = False
+    ALLOWED_HOSTS = [RENDER_EXTERNAL_HOSTNAME]
+    
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600
+        )
+    }
+else:
+    # --- ESTAMOS EN TU PC (Local) ---
+    print("💻 MODO: LOCAL (Desarrollo)")
+    DEBUG = True
+    ALLOWED_HOSTS = ['*'] 
+    
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # ==============================================================================
 # APLICACIONES INSTALADAS
@@ -42,14 +54,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # --- LIBRERÍAS DE DJANGO ---
+    'django.contrib.humanize',
     
-    # Tus aplicaciones
+    # --- TU APLICACIÓN ---
     'gestion',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # <--- OBLIGATORIO PARA RENDER
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # <--- ACTIVADO (Crucial para CSS en Render)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,7 +77,7 @@ ROOT_URLCONF = "configuracion.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, 'gestion/templates')],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -77,84 +91,47 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "configuracion.wsgi.application"
 
-
-# ==============================================================================
-# BASE DE DATOS (MEJORADO)
-# ==============================================================================
-# Esta configuración detecta automáticamente si estás en Render (PostgreSQL)
-# o en tu computador (SQLite). No fallará si no tienes internet o variables definidas.
-
-DATABASES = {
-    'default': dj_database_url.config(
-        # Si no encuentra una base de datos externa, usa este archivo local:
-        default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3'),
-        conn_max_age=600
-    )
-}
-
-
 # ==============================================================================
 # VALIDACIÓN DE CONTRASEÑAS
 # ==============================================================================
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    { "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator", },
+    { "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", },
+    { "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator", },
+    { "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator", },
 ]
-
 
 # ==============================================================================
 # IDIOMA Y ZONA HORARIA (CHILE)
 # ==============================================================================
 
-LANGUAGE_CODE = "es-cl"        # Español de Chile
-
-TIME_ZONE = "America/Santiago" # Hora de Chile (Importante para los registros)
-
+LANGUAGE_CODE = "es-cl"
+TIME_ZONE = "America/Santiago"
 USE_I18N = True
-
 USE_TZ = True
 
-
 # ==============================================================================
-# ARCHIVOS ESTÁTICOS (CSS, JS, IMÁGENES)
+# ARCHIVOS ESTÁTICOS
 # ==============================================================================
 
 STATIC_URL = '/static/'
 
-# 1. Carpeta donde tú pones los archivos mientras desarrollas
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    BASE_DIR / 'static',
 ]
 
-# 2. Carpeta donde Render reunirá todos los archivos (no tocar)
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# 3. Motor de almacenamiento para producción (WhiteNoise)
+# ACTIVADO: Permite comprimir y servir archivos en Render
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
 # ==============================================================================
-# REDIRECCIONES DE LOGIN / LOGOUT
+# REDIRECCIONES
 # ==============================================================================
 
-# Al iniciar sesión correctamente, ir al Dashboard Principal
 LOGIN_REDIRECT_URL = 'home'
-
-# Al cerrar sesión, volver al formulario de Login
 LOGOUT_REDIRECT_URL = 'login'
-
-# Si intenta entrar sin permiso, mandar al Login
 LOGIN_URL = 'login'

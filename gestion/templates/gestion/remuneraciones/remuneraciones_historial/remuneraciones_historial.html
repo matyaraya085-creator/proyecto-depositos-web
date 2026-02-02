@@ -1,0 +1,105 @@
+{% extends 'gestion/core/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<div class="container-fluid" style="max-width: 1200px;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+        <div>
+            <h2 class="fw-bold mb-0">📜 Historial de Liquidaciones</h2>
+            <p class="text-muted">Consulta los sueldos pagados por mes.</p>
+        </div>
+        <a href="{% url 'menu_remuneraciones' %}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body bg-light rounded d-flex align-items-center justify-content-between">
+                    <div class="w-100">
+                        <label class="fw-bold text-muted small mb-2"><i class="fas fa-calendar-alt me-1"></i> SELECCIONAR MES</label>
+                        <form method="GET" class="d-flex gap-2">
+                            <input type="month" name="fecha" value="{{ periodo_value }}" class="form-control fw-bold" onchange="this.form.submit()">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100 bg-dark text-white">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="opacity-75 mb-1">Trabajadores Pagados</h6>
+                        <h3 class="fw-bold mb-0">{{ total_registros }}</h3>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom-0 pt-3">
+             <h5 class="fw-bold text-dark mb-0">
+                 Resultados: <span class="text-primary">{{ periodo_str|capfirst }}</span>
+             </h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Trabajador</th>
+                        <th class="text-end">Sueldo Líquido</th>
+                        <th class="text-center">Fecha Cálculo</th>
+                        <th class="text-end pe-4">Ver Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for liq in liquidaciones %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-dark fw-bold me-2 border" style="width: 40px; height: 40px;">
+                                    {% if liq.trabajador.nombre %}
+                                        {{ liq.trabajador.nombre|make_list|first|upper }}
+                                    {% else %}
+                                        ?
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <span class="fw-bold d-block text-dark">{{ liq.trabajador.nombre }}</span>
+                                    <small class="text-muted">{{ liq.trabajador.cargo|default:"Operario" }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="fw-bold text-success text-end fs-6">${{ liq.sueldo_liquido|floatformat:0|intcomma }}</td>
+                        <td class="text-center text-muted small">{{ liq.fecha_calculo|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'ver_liquidacion' liq.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                <i class="fas fa-file-pdf me-1"></i> Ver Liquidación
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <div class="opacity-50 mb-3">
+                                <i class="fas fa-folder-open fa-4x"></i>
+                            </div>
+                            <h5 class="fw-bold">No hay sueldos registrados en este mes.</h5>
+                            <p class="small">Cambia la fecha en el filtro superior o genera nuevas nóminas.</p>
+                        </td>
+                    </tr>
+                    {% endfor %} 
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
